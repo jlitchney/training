@@ -44,6 +44,7 @@ export default function StudioProductPage() {
 
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  const [newCatVisibility, setNewCatVisibility] = useState<'public' | 'internal'>("public");
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,9 +130,18 @@ export default function StudioProductPage() {
   const colorLight = COLOR_LIGHT[product?.color ?? "blue"] ?? "bg-blue-50 border-blue-200";
   const colorBar = COLOR_BAR[product?.color ?? "blue"] ?? "bg-blue-500";
 
-  function handleCreateCategory() {
+  async function handleCreateCategory() {
     const name = newCatName.trim();
     if (!name) return;
+    if (newCatVisibility === "internal") {
+      const newCatViz = { ...(product?.categoryVisibility ?? {}), [name]: "internal" } as Record<string, 'public' | 'internal'>;
+      setProduct((prev) => prev ? { ...prev, categoryVisibility: newCatViz } : null);
+      await fetch(`/api/products/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryVisibility: newCatViz }),
+      });
+    }
     router.push(`/studio/${slug}/${encodeURIComponent(name)}`);
   }
 
@@ -159,7 +169,7 @@ export default function StudioProductPage() {
             </p>
           </div>
           <button
-            onClick={() => { setShowNewCat(true); setNewCatName(""); }}
+            onClick={() => { setShowNewCat(true); setNewCatName(""); setNewCatVisibility("public"); }}
             className={`text-sm font-medium text-white rounded-lg px-4 py-2 transition-colors flex-shrink-0 ${colorBg}`}
           >
             + New Category
@@ -167,8 +177,8 @@ export default function StudioProductPage() {
         </div>
 
         {showNewCat && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 flex gap-3 items-end">
-            <div className="flex-1">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6 space-y-3">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category name</label>
               <input
                 type="text"
@@ -180,14 +190,35 @@ export default function StudioProductPage() {
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreateCategory(); if (e.key === "Escape") setShowNewCat(false); }}
               />
             </div>
-            <button onClick={handleCreateCategory} disabled={!newCatName.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
-              Create
-            </button>
-            <button onClick={() => setShowNewCat(false)}
-              className="border border-gray-300 text-gray-600 text-sm rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors">
-              Cancel
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Visibility</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewCatVisibility("public")}
+                  className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${newCatVisibility === "public" ? "bg-green-50 border-green-300 text-green-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  🌐 Public
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewCatVisibility("internal")}
+                  className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${newCatVisibility === "internal" ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  🔒 Internal
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button onClick={handleCreateCategory} disabled={!newCatName.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
+                Create
+              </button>
+              <button onClick={() => setShowNewCat(false)}
+                className="flex-1 border border-gray-300 text-gray-600 text-sm rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
@@ -215,7 +246,7 @@ export default function StudioProductPage() {
                     <h2 className="font-semibold text-gray-900 leading-snug">{cat}</h2>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                       <button
-                        onClick={(e) => { e.preventDefault(); toggleCategoryVisibility(cat); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCategoryVisibility(cat); }}
                         className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
                           (product?.categoryVisibility?.[cat] ?? "public") === "internal"
                             ? "bg-amber-50 border-amber-200 text-amber-600"
