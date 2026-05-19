@@ -217,12 +217,12 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
       const prod = prods.find((p) => p.slug === slug) ?? null;
       const vid = vids.find((v) => v.id === videoId) ?? null;
       const cat = cats[videoId] ?? null;
-      const sameCategory = vids.filter((v) => v.id !== videoId && cats[v.id] === cat);
+      const sameCategory = vids.filter((v) => cats[v.id] === cat);
       setProduct(prod);
       setVideo(vid);
       setActiveVideo(vid);
       setCategory(cat);
-      setRelated(sameCategory.slice(0, 6));
+      setRelated(sameCategory);
       setLoading(false);
       if (!vid) setError(true);
     }).catch(() => { setLoading(false); setError(true); });
@@ -298,13 +298,13 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
           <p className="text-xs text-gray-600">Added {new Date(playing.recordedAt).toLocaleDateString()}</p>
         </div>
 
-        {related.length > 0 && (
+        {related.filter((v) => v.id !== playing.id).length > 0 && (
           <div>
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
               More in {category ?? "this product"}
             </h2>
             <div className="space-y-3">
-              {related.map((v) => (
+              {related.filter((v) => v.id !== playing.id).slice(0, 6).map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setActiveVideo(v)}
