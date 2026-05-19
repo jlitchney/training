@@ -45,6 +45,7 @@ function ShareModal({ video, slug, category, productName, onClose }: {
   const [to, setTo] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorDetail, setErrorDetail] = useState("");
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -61,8 +62,15 @@ function ShareModal({ video, slug, category, productName, onClose }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to, videoId: video.id, slug, category, message: message || undefined }),
       });
-      setStatus(res.ok ? "sent" : "error");
-    } catch {
+      if (res.ok) {
+        setStatus("sent");
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setErrorDetail(body.detail ?? body.error ?? `HTTP ${res.status}`);
+        setStatus("error");
+      }
+    } catch (err) {
+      setErrorDetail(err instanceof Error ? err.message : "Network error");
       setStatus("error");
     }
   }
@@ -117,7 +125,9 @@ function ShareModal({ video, slug, category, productName, onClose }: {
               />
             </div>
             {status === "error" && (
-              <p className="text-sm text-red-600">Something went wrong. Please try again.</p>
+              <p className="text-sm text-red-600">
+                Something went wrong{errorDetail ? `: ${errorDetail}` : ""}. Please try again.
+              </p>
             )}
             <div className="flex gap-2 pt-1">
               <button
