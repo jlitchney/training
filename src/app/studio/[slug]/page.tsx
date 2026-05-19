@@ -91,7 +91,7 @@ export default function StudioProductPage() {
   const selectedItemRef = useRef<ChecklistItem | null>(null);
 
   // Speech recognition
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const transcriptRef = useRef("");
 
   // Save form (inline, after recording)
@@ -233,11 +233,13 @@ export default function StudioProductPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SR) {
-          const recognition: SpeechRecognition = new SR();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const recognition: any = new SR();
           recognition.continuous = true;
           recognition.interimResults = false;
           recognition.lang = "en-US";
-          recognition.onresult = (e: SpeechRecognitionEvent) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          recognition.onresult = (e: any) => {
             for (let i = e.resultIndex; i < e.results.length; i++) {
               if (e.results[i].isFinal) transcriptRef.current += e.results[i][0].transcript + " ";
             }
