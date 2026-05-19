@@ -143,29 +143,37 @@ function videoKey(videoId: string) { return `training:video:${videoId}`; }
 export async function getVideos(productId: string, publishedOnly = false): Promise<Video[]> {
   const checklist = await getChecklist(productId);
 
-  // Primary path: use embedded video objects from the reliable checklist key
-  const embeddedVideos = checklist.filter((i) => i.video).map((i) => i.video!);
-  if (embeddedVideos.length > 0) {
-    return publishedOnly ? embeddedVideos.filter((v) => v.published) : embeddedVideos;
+  // Split into embedded (reliable) and legacy (videoId only, needs individual key read)
+  const embeddedById = new Map<string, Video>();
+  const legacyIds: string[] = [];
+  for (const item of checklist) {
+    if (item.video) {
+      embeddedById.set(item.video.id, item.video);
+    } else if (item.videoId && !embeddedById.has(item.videoId)) {
+      legacyIds.push(item.videoId);
+    }
   }
 
-  // Fallback for old data without embedded videos
-  const videoIds = [...new Set(checklist.filter((i) => i.videoId).map((i) => i.videoId!))];
-  if (videoIds.length === 0) return [];
+  const videos: Video[] = [...embeddedById.values()];
 
-  if (!hasKV()) {
-    const all = (memVideos[productId] ?? []);
-    const videos = videoIds.map((id) => all.find((v) => v.id === id)).filter(Boolean) as Video[];
-    return publishedOnly ? videos.filter((v) => v.published) : videos;
+  // Fetch legacy videos that haven't been re-saved with embedded data yet
+  if (legacyIds.length > 0) {
+    if (!hasKV()) {
+      const all = memVideos[productId] ?? [];
+      for (const id of legacyIds) {
+        const v = all.find((v) => v.id === id);
+        if (v) videos.push(v);
+      }
+    } else {
+      try {
+        const db = await kv();
+        const raw = await db.mget<(Video | null)[]>(...legacyIds.map(videoKey));
+        for (const v of raw) { if (v) videos.push(v); }
+      } catch { /* best-effort for legacy data */ }
+    }
   }
-  try {
-    const db = await kv();
-    const raw = await db.mget<(Video | null)[]>(...videoIds.map(videoKey));
-    const videos = raw.filter((v): v is Video => v !== null);
-    return publishedOnly ? videos.filter((v) => v.published) : videos;
-  } catch {
-    return [];
-  }
+
+  return publishedOnly ? videos.filter((v) => v.published) : videos;
 }
 
 export async function getVideo(productId: string, videoId: string): Promise<Video | null> {
