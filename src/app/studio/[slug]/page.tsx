@@ -10,17 +10,28 @@ interface EmbeddedVideo { id: string; title: string; published: boolean; }
 interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; }
 
 const COLOR_BG: Record<string, string> = {
-  blue: "bg-blue-600", purple: "bg-purple-600", green: "bg-green-600",
-  orange: "bg-orange-500", pink: "bg-pink-600", teal: "bg-teal-600",
+  blue: "bg-blue-600", indigo: "bg-indigo-600", violet: "bg-violet-600",
+  purple: "bg-purple-600", pink: "bg-pink-600", rose: "bg-rose-600",
+  red: "bg-red-600", orange: "bg-orange-500", amber: "bg-amber-500",
+  lime: "bg-lime-600", green: "bg-green-600", emerald: "bg-emerald-600",
+  teal: "bg-teal-600", cyan: "bg-cyan-600", sky: "bg-sky-500",
 };
 const COLOR_LIGHT: Record<string, string> = {
-  blue: "bg-blue-50 border-blue-200", purple: "bg-purple-50 border-purple-200",
-  green: "bg-green-50 border-green-200", orange: "bg-orange-50 border-orange-200",
-  pink: "bg-pink-50 border-pink-200", teal: "bg-teal-50 border-teal-200",
+  blue: "bg-blue-50 border-blue-200", indigo: "bg-indigo-50 border-indigo-200",
+  violet: "bg-violet-50 border-violet-200", purple: "bg-purple-50 border-purple-200",
+  pink: "bg-pink-50 border-pink-200", rose: "bg-rose-50 border-rose-200",
+  red: "bg-red-50 border-red-200", orange: "bg-orange-50 border-orange-200",
+  amber: "bg-amber-50 border-amber-200", lime: "bg-lime-50 border-lime-200",
+  green: "bg-green-50 border-green-200", emerald: "bg-emerald-50 border-emerald-200",
+  teal: "bg-teal-50 border-teal-200", cyan: "bg-cyan-50 border-cyan-200",
+  sky: "bg-sky-50 border-sky-200",
 };
 const COLOR_BAR: Record<string, string> = {
-  blue: "bg-blue-500", purple: "bg-purple-500", green: "bg-green-500",
-  orange: "bg-orange-500", pink: "bg-pink-500", teal: "bg-teal-500",
+  blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+  purple: "bg-purple-500", pink: "bg-pink-500", rose: "bg-rose-500",
+  red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500",
+  lime: "bg-lime-500", green: "bg-green-500", emerald: "bg-emerald-500",
+  teal: "bg-teal-500", cyan: "bg-cyan-500", sky: "bg-sky-400",
 };
 
 export default function StudioProductPage() {

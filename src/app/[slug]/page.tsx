@@ -8,12 +8,21 @@ interface Product { id: string; name: string; slug: string; description: string;
 interface Video { id: string; title: string; description: string; duration?: number; blobUrl?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string; border: string }> = {
-  blue:   { bg: "bg-blue-600",   light: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200" },
-  purple: { bg: "bg-purple-600", light: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
-  green:  { bg: "bg-green-600",  light: "bg-green-50",  text: "text-green-700",  border: "border-green-200" },
-  orange: { bg: "bg-orange-500", light: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" },
-  pink:   { bg: "bg-pink-600",   light: "bg-pink-50",   text: "text-pink-700",   border: "border-pink-200" },
-  teal:   { bg: "bg-teal-600",   light: "bg-teal-50",   text: "text-teal-700",   border: "border-teal-200" },
+  blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
+  indigo:  { bg: "bg-indigo-600",  light: "bg-indigo-50",  text: "text-indigo-700",  border: "border-indigo-200" },
+  violet:  { bg: "bg-violet-600",  light: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200" },
+  purple:  { bg: "bg-purple-600",  light: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200" },
+  pink:    { bg: "bg-pink-600",    light: "bg-pink-50",    text: "text-pink-700",    border: "border-pink-200" },
+  rose:    { bg: "bg-rose-600",    light: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200" },
+  red:     { bg: "bg-red-600",     light: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
+  orange:  { bg: "bg-orange-500",  light: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200" },
+  amber:   { bg: "bg-amber-500",   light: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  lime:    { bg: "bg-lime-600",    light: "bg-lime-50",    text: "text-lime-700",    border: "border-lime-200" },
+  green:   { bg: "bg-green-600",   light: "bg-green-50",   text: "text-green-700",   border: "border-green-200" },
+  emerald: { bg: "bg-emerald-600", light: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  teal:    { bg: "bg-teal-600",    light: "bg-teal-50",    text: "text-teal-700",    border: "border-teal-200" },
+  cyan:    { bg: "bg-cyan-600",    light: "bg-cyan-50",    text: "text-cyan-700",    border: "border-cyan-200" },
+  sky:     { bg: "bg-sky-500",     light: "bg-sky-50",     text: "text-sky-700",     border: "border-sky-200" },
 };
 function col(color: string) { return COLOR_MAP[color] ?? COLOR_MAP.blue; }
 

@@ -11,17 +11,28 @@ interface Video { id: string; title: string; description: string; blobUrl: strin
 interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
 
 const COLOR_BG: Record<string, string> = {
-  blue: "bg-blue-600", purple: "bg-purple-600", green: "bg-green-600",
-  orange: "bg-orange-500", pink: "bg-pink-600", teal: "bg-teal-600",
+  blue: "bg-blue-600", indigo: "bg-indigo-600", violet: "bg-violet-600",
+  purple: "bg-purple-600", pink: "bg-pink-600", rose: "bg-rose-600",
+  red: "bg-red-600", orange: "bg-orange-500", amber: "bg-amber-500",
+  lime: "bg-lime-600", green: "bg-green-600", emerald: "bg-emerald-600",
+  teal: "bg-teal-600", cyan: "bg-cyan-600", sky: "bg-sky-500",
 };
 const COLOR_TEXT: Record<string, string> = {
-  blue: "text-blue-700", purple: "text-purple-700", green: "text-green-700",
-  orange: "text-orange-700", pink: "text-pink-700", teal: "text-teal-700",
+  blue: "text-blue-700", indigo: "text-indigo-700", violet: "text-violet-700",
+  purple: "text-purple-700", pink: "text-pink-700", rose: "text-rose-700",
+  red: "text-red-700", orange: "text-orange-700", amber: "text-amber-700",
+  lime: "text-lime-700", green: "text-green-700", emerald: "text-emerald-700",
+  teal: "text-teal-700", cyan: "text-cyan-700", sky: "text-sky-700",
 };
 const COLOR_BADGE: Record<string, string> = {
-  blue: "bg-blue-50 border-blue-200 text-blue-700", purple: "bg-purple-50 border-purple-200 text-purple-700",
-  green: "bg-green-50 border-green-200 text-green-700", orange: "bg-orange-50 border-orange-200 text-orange-700",
-  pink: "bg-pink-50 border-pink-200 text-pink-700", teal: "bg-teal-50 border-teal-200 text-teal-700",
+  blue: "bg-blue-50 border-blue-200 text-blue-700", indigo: "bg-indigo-50 border-indigo-200 text-indigo-700",
+  violet: "bg-violet-50 border-violet-200 text-violet-700", purple: "bg-purple-50 border-purple-200 text-purple-700",
+  pink: "bg-pink-50 border-pink-200 text-pink-700", rose: "bg-rose-50 border-rose-200 text-rose-700",
+  red: "bg-red-50 border-red-200 text-red-700", orange: "bg-orange-50 border-orange-200 text-orange-700",
+  amber: "bg-amber-50 border-amber-200 text-amber-700", lime: "bg-lime-50 border-lime-200 text-lime-700",
+  green: "bg-green-50 border-green-200 text-green-700", emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+  teal: "bg-teal-50 border-teal-200 text-teal-700", cyan: "bg-cyan-50 border-cyan-200 text-cyan-700",
+  sky: "bg-sky-50 border-sky-200 text-sky-700",
 };
 
 function blobSrc(url: string) {
