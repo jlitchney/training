@@ -37,44 +37,6 @@ function formatDuration(s?: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
-// ── Video modal ──────────────────────────────────────────────────────
-function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  const isVideo = /\.(webm|mp4|mov)$/i.test(video.blobUrl) || video.blobUrl.includes(".blob.");
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="relative w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={onClose}
-          className="absolute -top-10 right-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-          aria-label="Close"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="bg-black rounded-xl overflow-hidden aspect-video">
-          {isVideo
-            ? <video src={blobSrc(video.blobUrl)} controls autoPlay className="w-full h-full" />
-            : <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Unsupported format</div>}
-        </div>
-        <div className="mt-4">
-          <h2 className="text-white font-bold text-lg leading-snug">{video.title}</h2>
-          {video.description && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{video.description}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Shared video card ────────────────────────────────────────────────
 function VideoCard({ video, slug, color }: { video: Video; slug: string; color: string }) {
@@ -209,7 +171,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
   const [related, setRelated] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [modalVideo, setModalVideo] = useState<Video | null>(null);
+  const [activeVideo, setActiveVideo] = useState<Video | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -223,6 +185,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
       const sameCategory = vids.filter((v) => v.id !== videoId && cats[v.id] === cat);
       setProduct(prod);
       setVideo(vid);
+      setActiveVideo(vid);
       setCategory(cat);
       setRelated(sameCategory.slice(0, 6));
       setLoading(false);
@@ -239,12 +202,11 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
   );
 
   const c = col(product.color);
-  const isVideo = /\.(webm|mp4|mov)$/i.test(video.blobUrl) || video.blobUrl.includes(".blob.");
+  const playing = activeVideo ?? video;
+  const isVideo = /\.(webm|mp4|mov)$/i.test(playing.blobUrl) || playing.blobUrl.includes(".blob.");
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {modalVideo && <VideoModal video={modalVideo} onClose={() => setModalVideo(null)} />}
-
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-3 min-w-0">
           <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
@@ -263,7 +225,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
             </>
           )}
           <span className="text-gray-700 flex-shrink-0 hidden md:block">/</span>
-          <span className="text-sm text-gray-500 truncate min-w-0 hidden md:block">{video.title}</span>
+          <span className="text-sm text-gray-500 truncate min-w-0 hidden md:block">{playing.title}</span>
           <div className="flex-1" />
           <button
             onClick={() => router.back()}
@@ -281,7 +243,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
         <div className="lg:col-span-2">
           <div className="bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center mb-6">
             {isVideo
-              ? <video src={blobSrc(video.blobUrl)} controls autoPlay={false} className="w-full h-full" />
+              ? <video key={playing.id} src={blobSrc(playing.blobUrl)} controls autoPlay={false} className="w-full h-full" />
               : <div className="text-gray-500 text-sm">Unsupported format</div>}
           </div>
 
@@ -296,9 +258,9 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
               </Link>
             )}
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">{video.title}</h1>
-          {video.description && <p className="text-gray-400 text-sm leading-relaxed mb-4">{video.description}</p>}
-          <p className="text-xs text-gray-600">Added {new Date(video.recordedAt).toLocaleDateString()}</p>
+          <h1 className="text-xl font-bold text-white mb-2">{playing.title}</h1>
+          {playing.description && <p className="text-gray-400 text-sm leading-relaxed mb-4">{playing.description}</p>}
+          <p className="text-xs text-gray-600">Added {new Date(playing.recordedAt).toLocaleDateString()}</p>
         </div>
 
         {related.length > 0 && (
@@ -310,11 +272,11 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
               {related.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => setModalVideo(v)}
-                  className="w-full flex gap-3 p-3 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors group text-left"
+                  onClick={() => setActiveVideo(v)}
+                  className={`w-full flex gap-3 p-3 rounded-lg transition-colors group text-left ${playing.id === v.id ? `${c.bg}` : "bg-gray-900 hover:bg-gray-800"}`}
                 >
-                  <div className={`w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-white text-xs ${c.bg}`}>▶</div>
-                  <p className="text-sm text-gray-200 group-hover:text-white transition-colors leading-snug line-clamp-2">{v.title}</p>
+                  <div className={`w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-white text-xs ${playing.id === v.id ? "bg-white/20" : c.bg}`}>▶</div>
+                  <p className={`text-sm leading-snug line-clamp-2 ${playing.id === v.id ? "text-white" : "text-gray-200 group-hover:text-white transition-colors"}`}>{v.title}</p>
                 </button>
               ))}
             </div>
