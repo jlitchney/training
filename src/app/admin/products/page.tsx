@@ -41,14 +41,40 @@ const COLOR_DOT: Record<string, string> = {
 };
 
 const EMOJIS = [
-  "⭐","🚀","💡","🔥","✅","🎯","💎","🏆","🎓","🎉",
-  "📊","📈","📋","📝","🗂️","📁","💼","📱","💻","🖥️",
-  "👥","👤","🤝","👔","🙋","🧑‍💼","🧑‍🎓","👩‍💼","🧑‍🏫","🧑‍🔬",
-  "🔑","⚙️","🔧","🛠️","🔬","📡","🔒","🛡️","📌","🎖️",
-  "🌟","💫","🔮","🌈","🌿","🍀","🌱","💐","🦋","🦅",
-  "🏢","🏬","🌍","🌐","🗺️","🏗️","🏛️","🎪","🎭","🎨",
-  "📣","📢","💬","🗣️","📞","📧","🗞️","📖","📚","🔖",
-  "🧩","🎲","♟️","🎸","🎵","🎬","📸","🖼️","✏️","🖊️",
+  // Stars & celebration
+  "⭐","🌟","💫","✨","🏆","🥇","🎖️","🎯","🎉","🎊",
+  // Positive / status
+  "✅","💡","🔥","🚀","💎","🆙","🔝","💯","⚡","🌈",
+  // Work & business
+  "💼","📊","📈","📉","📋","📝","🗂️","📁","📂","🗃️",
+  // Tech & devices
+  "💻","🖥️","📱","⌨️","🖱️","🖨️","📡","🔋","💾","🖲️",
+  // Communication
+  "📣","📢","💬","🗣️","📞","☎️","📧","📨","📩","📮",
+  // Documents & learning
+  "📖","📚","📰","🗞️","🔖","📜","🎓","🏫","✏️","🖊️",
+  // Tools & building
+  "⚙️","🔧","🔨","🛠️","🔩","🔑","🗝️","🔒","🛡️","🔬",
+  // People & roles
+  "👥","👤","🤝","👔","🙋","🧑‍💼","🧑‍🎓","🧑‍🏫","🧑‍🔬","🧑‍💻",
+  // Health & wellness
+  "❤️","💪","🧠","👁️","🩺","💊","🏥","🧘","🏃","🌡️",
+  // Finance & growth
+  "💰","💵","💳","🏦","📦","🛒","🤑","💹","🪙","📤",
+  // Nature & environment
+  "🌿","🍀","🌱","🌲","🌍","🌐","☀️","🌙","⛅","🌊",
+  // Animals
+  "🦁","🦊","🐺","🦅","🦋","🐝","🦄","🐉","🦈","🦉",
+  // Buildings & places
+  "🏢","🏬","🏛️","🏗️","🏠","🏪","🗼","🗺️","🌆","🌉",
+  // Transport
+  "🚗","✈️","🚂","🚀","🛸","🚁","⛵","🚢","🏎️","🛵",
+  // Food & drink
+  "☕","🍎","🍕","🎂","🍺","🥂","🍜","🥗","🍔","🧃",
+  // Art & media
+  "🎨","🎭","🎬","🎵","🎸","🎤","📸","🖼️","🎮","🎲",
+  // Symbols & misc
+  "🧩","♟️","🔮","🪄","🧲","📌","📍","🗓️","⏰","🔔",
 ];
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
@@ -97,8 +123,8 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (e: string)
         {value}
       </button>
       {open && (
-        <div className="absolute left-0 top-14 z-20 bg-white rounded-xl border border-gray-200 shadow-lg p-3 w-64">
-          <div className="grid grid-cols-8 gap-1">
+        <div className="absolute left-0 top-14 z-20 bg-white rounded-xl border border-gray-200 shadow-lg p-3 w-80 max-h-72 overflow-y-auto">
+          <div className="grid grid-cols-10 gap-1">
             {EMOJIS.map((emoji) => (
               <button
                 key={emoji}
