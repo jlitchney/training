@@ -131,9 +131,14 @@ export async function deleteProduct(slug: string): Promise<void> {
 }
 
 // ── Videos ──────────────────────────────────────────────────────────
-function videosKey(productId: string) {
-  return `training:videos:${productId}`;
-}
+// Each video stored individually; product holds an ordered list of IDs.
+// This avoids read-modify-write races on the full list (e.g. publish
+// failing because the list read returned stale data from before the
+// create write was visible).
+function videoKey(videoId: string) { return `training:video:${videoId}`; }
+function videoIdsKey(productId: string) { return `training:video-ids:${productId}`; }
+// Legacy key — only used for one-time migration on first read
+function videosKeyLegacy(productId: string) { return `training:videos:${productId}`; }
 
 export async function getVideos(productId: string, publishedOnly = false): Promise<Video[]> {
   let videos: Video[];
@@ -142,26 +147,36 @@ export async function getVideos(productId: string, publishedOnly = false): Promi
   } else {
     try {
       const db = await kv();
-      videos = (await db.get<Video[]>(videosKey(productId))) ?? [];
+      let ids = await db.get<string[]>(videoIdsKey(productId));
+      if (!ids) {
+        // One-time migration from legacy single-array storage
+        const legacy = await db.get<Video[]>(videosKeyLegacy(productId));
+        if (legacy && legacy.length > 0) {
+          await Promise.all(legacy.map((v) => db.set(videoKey(v.id), v)));
+          ids = legacy.map((v) => v.id);
+          await db.set(videoIdsKey(productId), ids);
+        } else {
+          ids = [];
+        }
+      }
+      if (ids.length === 0) return [];
+      const raw = await db.mget<(Video | null)[]>(...ids.map(videoKey));
+      videos = raw.filter((v): v is Video => v !== null);
     } catch {
-      videos = [];
+      return [];
     }
   }
-  if (publishedOnly) return videos.filter((v) => v.published);
-  return videos;
+  return publishedOnly ? videos.filter((v) => v.published) : videos;
 }
 
 export async function getVideo(productId: string, videoId: string): Promise<Video | null> {
-  const videos = await getVideos(productId);
-  return videos.find((v) => v.id === videoId) ?? null;
-}
-
-// Direct KV read used by write operations — propagates errors instead of
-// returning [] on failure, which would silently wipe existing data on write.
-async function readVideosForWrite(productId: string): Promise<Video[]> {
-  if (!hasKV()) return memVideos[productId] ?? [];
-  const db = await kv();
-  return (await db.get<Video[]>(videosKey(productId))) ?? [];
+  if (!hasKV()) return (memVideos[productId] ?? []).find((v) => v.id === videoId) ?? null;
+  try {
+    const db = await kv();
+    return await db.get<Video>(videoKey(videoId));
+  } catch {
+    return null;
+  }
 }
 
 export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Promise<Video> {
@@ -170,41 +185,43 @@ export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Prom
     id: uuidv4(),
     recordedAt: new Date().toISOString(),
   };
-  const existing = await readVideosForWrite(video.productId);
-  const updated = [newVideo, ...existing];
   if (!hasKV()) {
-    memVideos[video.productId] = updated;
-  } else {
-    const db = await kv();
-    await db.set(videosKey(video.productId), updated);
+    memVideos[video.productId] = [newVideo, ...(memVideos[video.productId] ?? [])];
+    return newVideo;
   }
+  const db = await kv();
+  await db.set(videoKey(newVideo.id), newVideo);
+  const ids = (await db.get<string[]>(videoIdsKey(video.productId))) ?? [];
+  await db.set(videoIdsKey(video.productId), [newVideo.id, ...ids]);
   return newVideo;
 }
 
 export async function updateVideo(productId: string, videoId: string, patch: Partial<Video>): Promise<Video | null> {
-  const videos = await readVideosForWrite(productId);
-  const idx = videos.findIndex((v) => v.id === videoId);
-  if (idx === -1) return null;
-  const updated = { ...videos[idx], ...patch };
-  videos[idx] = updated;
   if (!hasKV()) {
-    memVideos[productId] = videos;
-  } else {
-    const db = await kv();
-    await db.set(videosKey(productId), videos);
+    const videos = memVideos[productId] ?? [];
+    const idx = videos.findIndex((v) => v.id === videoId);
+    if (idx === -1) return null;
+    videos[idx] = { ...videos[idx], ...patch };
+    return videos[idx];
   }
+  const db = await kv();
+  // Read and write only the single video key — no list involved, no race condition
+  const existing = await db.get<Video>(videoKey(videoId));
+  if (!existing) return null;
+  const updated = { ...existing, ...patch };
+  await db.set(videoKey(videoId), updated);
   return updated;
 }
 
 export async function deleteVideo(productId: string, videoId: string): Promise<void> {
-  const videos = await readVideosForWrite(productId);
-  const filtered = videos.filter((v) => v.id !== videoId);
   if (!hasKV()) {
-    memVideos[productId] = filtered;
-  } else {
-    const db = await kv();
-    await db.set(videosKey(productId), filtered);
+    memVideos[productId] = (memVideos[productId] ?? []).filter((v) => v.id !== videoId);
+    return;
   }
+  const db = await kv();
+  await db.del(videoKey(videoId));
+  const ids = (await db.get<string[]>(videoIdsKey(productId))) ?? [];
+  await db.set(videoIdsKey(productId), ids.filter((id) => id !== videoId));
 }
 
 // ── Checklist ────────────────────────────────────────────────────────
