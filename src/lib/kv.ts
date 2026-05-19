@@ -131,14 +131,11 @@ export async function deleteProduct(slug: string): Promise<void> {
 }
 
 // ── Videos ──────────────────────────────────────────────────────────
-// Each video stored individually; product holds an ordered list of IDs.
-// This avoids read-modify-write races on the full list (e.g. publish
-// failing because the list read returned stale data from before the
-// create write was visible).
+// Each video stored as its own key. The ordered ID list uses Redis native
+// list ops (LPUSH / LRANGE / LREM) so adding/removing is atomic — no
+// read-modify-write race condition on the list itself.
 function videoKey(videoId: string) { return `training:video:${videoId}`; }
-function videoIdsKey(productId: string) { return `training:video-ids:${productId}`; }
-// Legacy key — only used for one-time migration on first read
-function videosKeyLegacy(productId: string) { return `training:videos:${productId}`; }
+function videoIdsKey(productId: string) { return `training:video-ids:v2:${productId}`; }
 
 export async function getVideos(productId: string, publishedOnly = false): Promise<Video[]> {
   let videos: Video[];
@@ -147,19 +144,8 @@ export async function getVideos(productId: string, publishedOnly = false): Promi
   } else {
     try {
       const db = await kv();
-      let ids = await db.get<string[]>(videoIdsKey(productId));
-      if (!ids) {
-        // One-time migration from legacy single-array storage
-        const legacy = await db.get<Video[]>(videosKeyLegacy(productId));
-        if (legacy && legacy.length > 0) {
-          await Promise.all(legacy.map((v) => db.set(videoKey(v.id), v)));
-          ids = legacy.map((v) => v.id);
-          await db.set(videoIdsKey(productId), ids);
-        } else {
-          ids = [];
-        }
-      }
-      if (ids.length === 0) return [];
+      const ids = (await db.lrange(videoIdsKey(productId), 0, -1)) as string[];
+      if (!ids || ids.length === 0) return [];
       const raw = await db.mget<(Video | null)[]>(...ids.map(videoKey));
       videos = raw.filter((v): v is Video => v !== null);
     } catch {
@@ -190,9 +176,9 @@ export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Prom
     return newVideo;
   }
   const db = await kv();
+  // Write the video object, then atomically prepend its ID to the list
   await db.set(videoKey(newVideo.id), newVideo);
-  const ids = (await db.get<string[]>(videoIdsKey(video.productId))) ?? [];
-  await db.set(videoIdsKey(video.productId), [newVideo.id, ...ids]);
+  await db.lpush(videoIdsKey(video.productId), newVideo.id);
   return newVideo;
 }
 
@@ -205,7 +191,7 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
     return videos[idx];
   }
   const db = await kv();
-  // Read and write only the single video key — no list involved, no race condition
+  // Single-key read/write — no list involved, no race condition with createVideo
   const existing = await db.get<Video>(videoKey(videoId));
   if (!existing) return null;
   const updated = { ...existing, ...patch };
@@ -220,8 +206,7 @@ export async function deleteVideo(productId: string, videoId: string): Promise<v
   }
   const db = await kv();
   await db.del(videoKey(videoId));
-  const ids = (await db.get<string[]>(videoIdsKey(productId))) ?? [];
-  await db.set(videoIdsKey(productId), ids.filter((id) => id !== videoId));
+  await db.lrem(videoIdsKey(productId), 1, videoId);
 }
 
 // ── Checklist ────────────────────────────────────────────────────────

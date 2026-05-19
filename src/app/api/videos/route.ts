@@ -9,7 +9,9 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
   const publishedOnly = !session; // unauthenticated users see only published
   const videos = await getVideos(productId, publishedOnly);
-  return NextResponse.json(videos);
+  return NextResponse.json(videos, {
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 export async function POST(req: NextRequest) {
