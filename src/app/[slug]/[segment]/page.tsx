@@ -38,69 +38,162 @@ function formatDuration(s?: number) {
 }
 
 
+// ── Share modal ──────────────────────────────────────────────────────
+function ShareModal({ video, slug, category, productName, onClose }: {
+  video: Video; slug: string; category: string; productName: string; onClose: () => void;
+}) {
+  const [to, setTo] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  async function handleSend() {
+    if (!to) return;
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/share-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, videoId: video.id, slug, category, message: message || undefined }),
+      });
+      setStatus(res.ok ? "sent" : "error");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="font-semibold text-gray-900 text-base">Share via email</h2>
+            <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{video.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors ml-4 flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {status === "sent" ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="font-medium text-gray-900 mb-1">Email sent!</p>
+            <p className="text-sm text-gray-500">Sent to {to}</p>
+            <button onClick={onClose} className="mt-4 text-sm text-blue-600 hover:underline">Close</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">To</label>
+              <input
+                type="email"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                placeholder="recipient@example.com"
+                autoFocus
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Add a message <span className="text-gray-400 font-normal">(optional)</span></label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Hey, thought you'd find this useful…"
+                rows={3}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 resize-none"
+              />
+            </div>
+            {status === "error" && (
+              <p className="text-sm text-red-600">Something went wrong. Please try again.</p>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleSend}
+                disabled={!to || status === "sending"}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl py-2.5 transition-colors"
+              >
+                {status === "sending" ? "Sending…" : "Send"}
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 border border-gray-300 text-gray-700 text-sm rounded-xl py-2.5 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Shared video card ────────────────────────────────────────────────
 function VideoCard({ video, slug, color, productName, category }: {
   video: Video; slug: string; color: string; productName?: string; category?: string;
 }) {
   const c = col(color);
-
-  function handleShare(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = `${window.location.origin}/${slug}/${video.id}`;
-    const subject = video.title;
-    const lines = [
-      video.title,
-    ];
-    if (video.description) {
-      lines.push("", video.description);
-    }
-    lines.push("", `Watch: ${url}`);
-    if (productName && category) {
-      lines.push("", `${productName} › ${category}`);
-    }
-    lines.push("—", "All-Star Training Knowledge Base");
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-  }
+  const [showShare, setShowShare] = useState(false);
 
   return (
-    <Link
-      href={`/${slug}/${video.id}`}
-      className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all flex flex-col"
-    >
-      <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
-        <video src={blobSrc(video.blobUrl)} preload="metadata" muted className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-            <span className={`text-sm pl-0.5 ${c.text}`}>▶</span>
+    <>
+      {showShare && productName && category && (
+        <ShareModal
+          video={video} slug={slug} category={category}
+          productName={productName} onClose={() => setShowShare(false)}
+        />
+      )}
+      <Link
+        href={`/${slug}/${video.id}`}
+        className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all flex flex-col"
+      >
+        <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
+          <video src={blobSrc(video.blobUrl)} preload="metadata" muted className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+              <span className={`text-sm pl-0.5 ${c.text}`}>▶</span>
+            </div>
           </div>
+          {video.duration && (
+            <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+              {formatDuration(video.duration)}
+            </span>
+          )}
         </div>
-        {video.duration && (
-          <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
-            {formatDuration(video.duration)}
-          </span>
-        )}
-      </div>
-      <div className="p-4 flex-1 flex flex-col">
-        <h3 className="font-semibold text-gray-900 leading-snug mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
-          {video.title}
-        </h3>
-        {video.description && <p className="text-sm text-gray-500 line-clamp-2 flex-1">{video.description}</p>}
-        {productName && category && (
-          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Share via email
-            </button>
-          </div>
-        )}
-      </div>
-    </Link>
+        <div className="p-4 flex-1 flex flex-col">
+          <h3 className="font-semibold text-gray-900 leading-snug mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
+            {video.title}
+          </h3>
+          {video.description && <p className="text-sm text-gray-500 line-clamp-2 flex-1">{video.description}</p>}
+          {productName && category && (
+            <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowShare(true); }}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Share via email
+              </button>
+            </div>
+          )}
+        </div>
+      </Link>
+    </>
   );
 }
 
