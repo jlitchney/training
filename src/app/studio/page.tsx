@@ -77,7 +77,7 @@ export default function StudioPage() {
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo-black.svg" alt="All-Star Training" className="h-7 w-auto" />
-            <span className="text-sm text-gray-500 hidden sm:block">Recording Studio</span>
+            <span className="text-sm text-gray-500 hidden sm:block">KB Recording Studio</span>
           </div>
           {user && <UserMenu user={user} />}
         </div>
