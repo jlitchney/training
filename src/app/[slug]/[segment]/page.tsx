@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 // UUID pattern — determines whether this segment is a video ID or a category name
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -155,6 +155,7 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
 
 // ── Video player page ────────────────────────────────────────────────
 function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
+  const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -212,15 +213,15 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
             </>
           )}
           <div className="flex-1" />
-          <Link
-            href={category ? `/${slug}/${encodeURIComponent(category)}` : `/${slug}`}
+          <button
+            onClick={() => router.back()}
             className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </Link>
+          </button>
         </div>
       </header>
 
