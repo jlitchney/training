@@ -70,9 +70,15 @@ const ASR_CHECKLIST: ChecklistItem[] = [
 ].map((item) => ({ description: "", ...item }));
 
 // ── KV helpers ──────────────────────────────────────────────────────
+// cache: 'no-store' bypasses Next.js's Data Cache so every read goes
+// directly to Upstash instead of returning a stale cached fetch response.
 async function kv() {
-  const { kv } = await import("@vercel/kv");
-  return kv;
+  const { createClient } = await import("@vercel/kv");
+  return createClient({
+    url: process.env.KV_REST_API_URL!,
+    token: process.env.KV_REST_API_TOKEN!,
+    cache: "no-store",
+  });
 }
 
 // ── Products ────────────────────────────────────────────────────────
