@@ -101,6 +101,13 @@ export default function StudioCategoryPage() {
     [checklist, decodedCategory]
   );
 
+  // Auto-select first covered item on load, or first item if none covered
+  useEffect(() => {
+    if (loading || categoryItems.length === 0 || selectedItemId) return;
+    const covered = categoryItems.find((i) => i.videoId);
+    setSelectedItemId((covered ?? categoryItems[0]).id);
+  }, [loading, categoryItems, selectedItemId]);
+
   const allCategoryNames = useMemo(() => {
     const set = new Set<string>();
     for (const item of checklist) { if (item.category) set.add(item.category); }
@@ -270,11 +277,15 @@ export default function StudioCategoryPage() {
           });
           setChecklist((prev) => prev.map((i) => (i.id === selectedItemId ? { ...i, title: formTitle, category: formCategory || undefined } : i)));
         }
-        await fetch("/api/checklist", {
+        const linkRes = await fetch("/api/checklist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "link", productId: slug, itemId: selectedItemId, videoId: video.id }),
         });
+        if (!linkRes.ok) {
+          setUploadError("Video saved but failed to link to checklist item. Please reload and try again.");
+          return;
+        }
         setChecklist((prev) => prev.map((i) => (i.id === selectedItemId ? { ...i, videoId: video.id } : i)));
       }
 
