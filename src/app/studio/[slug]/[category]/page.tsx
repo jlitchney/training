@@ -28,6 +28,21 @@ function blobSrc(url: string) {
   if (url.includes(".blob.vercel-storage.com")) return `/api/blob?url=${encodeURIComponent(url)}`;
   return url;
 }
+
+// sessionStorage helpers — guard against SSR and private-mode exceptions
+function cacheVideo(video: Video) {
+  try { sessionStorage.setItem(`vid:${video.id}`, JSON.stringify(video)); } catch { /* ignore */ }
+}
+function uncacheVideo(videoId: string) {
+  try { sessionStorage.removeItem(`vid:${videoId}`); } catch { /* ignore */ }
+}
+function getCachedVideo(videoId: string): Video | null {
+  try {
+    const s = sessionStorage.getItem(`vid:${videoId}`);
+    return s ? (JSON.parse(s) as Video) : null;
+  } catch { return null; }
+}
+
 function formatDuration(seconds?: number) {
   if (!seconds) return "";
   const m = Math.floor(seconds / 60);
@@ -120,10 +135,11 @@ export default function StudioCategoryPage() {
   );
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
 
-  const linkedVideo = useMemo(
-    () => selectedItem?.video ?? (selectedItem?.videoId ? videos.find((v) => v.id === selectedItem.videoId) ?? null : null),
-    [selectedItem, videos]
-  );
+  const linkedVideo = useMemo(() => {
+    if (selectedItem?.video) return selectedItem.video;
+    if (!selectedItem?.videoId) return null;
+    return videos.find((v) => v.id === selectedItem.videoId) ?? getCachedVideo(selectedItem.videoId);
+  }, [selectedItem, videos]);
 
   const categoryCovered = categoryItems.filter((i) => i.videoId).length;
   const published = videos.filter((v) => v.published).length;
@@ -292,6 +308,7 @@ export default function StudioCategoryPage() {
           return;
         }
         setChecklist((prev) => prev.map((i) => (i.id === selectedItemId ? { ...i, videoId: video.id, video } : i)));
+        cacheVideo(video);
       }
 
       setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc("");
@@ -308,9 +325,11 @@ export default function StudioCategoryPage() {
       body: JSON.stringify({ productId: slug, published: !video.published }),
     });
     if (res.ok) {
-      setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, published: !v.published } : v)));
+      const toggled = { ...video, published: !video.published };
+      cacheVideo(toggled);
+      setVideos((prev) => prev.map((v) => (v.id === video.id ? toggled : v)));
       setChecklist((prev) => prev.map((i) =>
-        i.video?.id === video.id ? { ...i, video: { ...i.video, published: !video.published } } : i
+        i.video?.id === video.id ? { ...i, video: toggled } : i
       ));
     } else {
       const err = await res.json().catch(() => ({}));
@@ -326,9 +345,11 @@ export default function StudioCategoryPage() {
       body: JSON.stringify({ productId: slug, title: editTitle, description: editDesc }),
     });
     if (!res.ok) return;
-    setVideos((prev) => prev.map((v) => (v.id === editVideo.id ? { ...v, title: editTitle, description: editDesc } : v)));
+    const edited = { ...editVideo, title: editTitle, description: editDesc };
+    cacheVideo(edited);
+    setVideos((prev) => prev.map((v) => (v.id === editVideo.id ? edited : v)));
     setChecklist((prev) => prev.map((i) =>
-      i.video?.id === editVideo.id ? { ...i, video: { ...i.video, title: editTitle, description: editDesc } } : i
+      i.video?.id === editVideo.id ? { ...i, video: edited } : i
     ));
     setEditVideo(null);
   }
@@ -336,6 +357,7 @@ export default function StudioCategoryPage() {
   async function handleDelete(video: Video) {
     if (!confirm(`Delete "${video.title}"?`)) return;
     await fetch(`/api/videos/${video.id}?productId=${slug}`, { method: "DELETE" });
+    uncacheVideo(video.id);
     setVideos((prev) => prev.filter((v) => v.id !== video.id));
     setChecklist((prev) => prev.map((i) => (i.videoId === video.id ? { ...i, videoId: undefined, video: undefined } : i)));
   }
