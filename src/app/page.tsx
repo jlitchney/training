@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { UserMenu } from "@/components/UserMenu";
 
 interface Product {
   id: string;
@@ -50,6 +52,7 @@ function formatDuration(seconds?: number) {
 }
 
 export default function HomePage() {
+  const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [allVideos, setAllVideos] = useState<Record<string, Video[]>>({});
   const [search, setSearch] = useState("");
@@ -97,12 +100,16 @@ export default function HomePage() {
             <img src="/logo-black.svg" alt="All-Star Training" className="h-8 w-auto" />
             <span className="text-sm text-gray-400 hidden sm:block">Video Knowledge Base</span>
           </div>
-          <Link
-            href="/studio"
-            className="text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 rounded-lg px-3 py-1.5 transition-colors"
-          >
-            Staff Login →
-          </Link>
+          {session?.user ? (
+            <UserMenu user={{ name: session.user.name ?? session.user.email ?? "", role: (session.user as { role?: string }).role ?? "admin" }} />
+          ) : (
+            <Link
+              href="/studio"
+              className="text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              Staff Login →
+            </Link>
+          )}
         </div>
       </header>
 
