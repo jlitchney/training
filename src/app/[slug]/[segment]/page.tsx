@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-// UUID pattern — determines whether this segment is a video ID or a category name
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
@@ -36,6 +35,45 @@ function blobSrc(url: string) {
 function formatDuration(s?: number) {
   if (!s) return null;
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+}
+
+// ── Video modal ──────────────────────────────────────────────────────
+function VideoModal({ video, onClose }: { video: Video; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const isVideo = /\.(webm|mp4|mov)$/i.test(video.blobUrl) || video.blobUrl.includes(".blob.");
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="relative w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={onClose}
+          className="absolute -top-10 right-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="bg-black rounded-xl overflow-hidden aspect-video">
+          {isVideo
+            ? <video src={blobSrc(video.blobUrl)} controls autoPlay className="w-full h-full" />
+            : <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">Unsupported format</div>}
+        </div>
+        <div className="mt-4">
+          <h2 className="text-white font-bold text-lg leading-snug">{video.title}</h2>
+          {video.description && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{video.description}</p>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Shared video card ────────────────────────────────────────────────
@@ -171,6 +209,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
   const [related, setRelated] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [modalVideo, setModalVideo] = useState<Video | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -204,27 +243,31 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      {modalVideo && <VideoModal video={modalVideo} onClose={() => setModalVideo(null)} />}
+
       <header className="bg-gray-900 border-b border-gray-800">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-3 min-w-0">
           <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
             <img src="/logo-white.svg" alt="All-Star Training" className="h-7 w-auto" />
           </Link>
-          <span className="text-gray-700">/</span>
-          <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors">
+          <span className="text-gray-700 flex-shrink-0">/</span>
+          <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0">
             {product.emoji} {product.name}
           </Link>
           {category && (
             <>
-              <span className="text-gray-700">/</span>
-              <Link href={`/${slug}/${encodeURIComponent(category)}`} className="text-sm text-gray-400 hover:text-white transition-colors">
+              <span className="text-gray-700 flex-shrink-0">/</span>
+              <Link href={`/${slug}/${encodeURIComponent(category)}`} className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0">
                 {category}
               </Link>
             </>
           )}
+          <span className="text-gray-700 flex-shrink-0 hidden md:block">/</span>
+          <span className="text-sm text-gray-500 truncate min-w-0 hidden md:block">{video.title}</span>
           <div className="flex-1" />
           <button
             onClick={() => router.back()}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,11 +308,14 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
             </h2>
             <div className="space-y-3">
               {related.map((v) => (
-                <Link key={v.id} href={`/${slug}/${v.id}`}
-                  className="flex gap-3 p-3 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors group">
+                <button
+                  key={v.id}
+                  onClick={() => setModalVideo(v)}
+                  className="w-full flex gap-3 p-3 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors group text-left"
+                >
                   <div className={`w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-white text-xs ${c.bg}`}>▶</div>
                   <p className="text-sm text-gray-200 group-hover:text-white transition-colors leading-snug line-clamp-2">{v.title}</p>
-                </Link>
+                </button>
               ))}
             </div>
           </div>
