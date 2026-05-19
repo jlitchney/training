@@ -42,6 +42,7 @@ export default function VideoPage() {
   const { slug, videoId } = useParams<{ slug: string; videoId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
   const [related, setRelated] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -49,13 +50,17 @@ export default function VideoPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/products").then((r) => r.json()),
-      fetch(`/api/videos?productId=${slug}`).then((r) => r.json()),
-    ]).then(([prods, vids]: [Product[], Video[]]) => {
+      fetch(`/api/videos?productId=${slug}&publishedOnly=true`).then((r) => r.json()),
+      fetch(`/api/video-categories?productId=${slug}`).then((r) => r.json()),
+    ]).then(([prods, vids, catMap]: [Product[], Video[], Record<string, string>]) => {
       const prod = prods.find((p) => p.slug === slug) ?? null;
       const vid = vids.find((v) => v.id === videoId) ?? null;
+      const cat = catMap[videoId] ?? null;
+      const sameCategory = vids.filter((v) => v.id !== videoId && catMap[v.id] === cat);
       setProduct(prod);
       setVideo(vid);
-      setRelated(vids.filter((v) => v.id !== videoId).slice(0, 6));
+      setCategory(cat);
+      setRelated(sameCategory.slice(0, 6));
       setLoading(false);
       if (!vid) setError(true);
     }).catch(() => { setLoading(false); setError(true); });
@@ -88,6 +93,12 @@ export default function VideoPage() {
           <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors">
             {product.emoji} {product.name}
           </Link>
+          {category && (
+            <>
+              <span className="text-gray-700">/</span>
+              <span className="text-sm text-gray-400">{category}</span>
+            </>
+          )}
         </div>
       </header>
 
@@ -107,8 +118,15 @@ export default function VideoPage() {
             )}
           </div>
 
-          <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full text-white mb-3 ${c.bg}`}>
-            {product.emoji} {product.name}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full text-white ${c.bg}`}>
+              {product.emoji} {product.name}
+            </div>
+            {category && (
+              <div className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-gray-700 text-gray-200">
+                {category}
+              </div>
+            )}
           </div>
           <h1 className="text-xl font-bold text-white mb-2">{video.title}</h1>
           {video.description && (
@@ -122,7 +140,9 @@ export default function VideoPage() {
         {/* Sidebar: related videos */}
         {related.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">More videos</h2>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
+              More {category ? `in ${category}` : "videos"}
+            </h2>
             <div className="space-y-3">
               {related.map((v) => (
                 <Link
