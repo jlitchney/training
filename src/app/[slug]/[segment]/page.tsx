@@ -39,8 +39,34 @@ function formatDuration(s?: number) {
 
 
 // ── Shared video card ────────────────────────────────────────────────
-function VideoCard({ video, slug, color }: { video: Video; slug: string; color: string }) {
+function VideoCard({ video, slug, color, productName, category }: {
+  video: Video; slug: string; color: string; productName?: string; category?: string;
+}) {
   const c = col(color);
+
+  function handleShare(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/${slug}/${video.id}`;
+    const subject = video.title;
+    const lines = [
+      "Hi,",
+      "",
+      "I wanted to share this training video with you:",
+      "",
+      `📹 ${video.title}`,
+    ];
+    if (video.description) {
+      lines.push("", video.description);
+    }
+    lines.push("", `▶ Watch the video: ${url}`);
+    if (productName && category) {
+      lines.push("", `This video is part of the ${productName} › ${category} training library.`);
+    }
+    lines.push("", "—", "All-Star Training Knowledge Base", window.location.origin);
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+  }
+
   return (
     <Link
       href={`/${slug}/${video.id}`}
@@ -64,6 +90,19 @@ function VideoCard({ video, slug, color }: { video: Video; slug: string; color: 
           {video.title}
         </h3>
         {video.description && <p className="text-sm text-gray-500 line-clamp-2 flex-1">{video.description}</p>}
+        {productName && category && (
+          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Share via email
+            </button>
+          </div>
+        )}
       </div>
     </Link>
   );
@@ -151,7 +190,7 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
           <p className="text-sm text-gray-400">No results for "{search}"</p>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((v) => <VideoCard key={v.id} video={v} slug={slug} color={product.color} />)}
+            {results.map((v) => <VideoCard key={v.id} video={v} slug={slug} color={product.color} productName={product.name} category={category} />)}
           </div>
         )}
         {videos.length === 0 && !loading && (
