@@ -127,22 +127,14 @@ export default function StudioProductPage() {
 
   const startRecording = useCallback(async () => {
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      // Capture screen video only (no system audio to avoid background noise)
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       let micStream: MediaStream | null = null;
       try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { /* mic denied */ }
 
-      let combinedStream: MediaStream;
-      if (micStream) {
-        const ctx = new AudioContext();
-        const dest = ctx.createMediaStreamDestination();
-        if (screenStream.getAudioTracks().length > 0) {
-          ctx.createMediaStreamSource(new MediaStream(screenStream.getAudioTracks())).connect(dest);
-        }
-        ctx.createMediaStreamSource(micStream).connect(dest);
-        combinedStream = new MediaStream([...screenStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-      } else {
-        combinedStream = screenStream;
-      }
+      const tracks = [...screenStream.getVideoTracks()];
+      if (micStream) tracks.push(...micStream.getAudioTracks());
+      const combinedStream = new MediaStream(tracks);
 
       const startTime = Date.now();
       const recorder = new MediaRecorder(combinedStream);
