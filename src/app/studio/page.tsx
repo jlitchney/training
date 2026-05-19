@@ -20,13 +20,22 @@ interface Video {
   published: boolean;
 }
 
-const COLOR_CLASSES: Record<string, { bg: string; light: string; border: string }> = {
-  blue:   { bg: "bg-blue-600",   light: "bg-blue-50",   border: "border-blue-200" },
-  purple: { bg: "bg-purple-600", light: "bg-purple-50", border: "border-purple-200" },
-  green:  { bg: "bg-green-600",  light: "bg-green-50",  border: "border-green-200" },
-  orange: { bg: "bg-orange-500", light: "bg-orange-50", border: "border-orange-200" },
-  pink:   { bg: "bg-pink-600",   light: "bg-pink-50",   border: "border-pink-200" },
-  teal:   { bg: "bg-teal-600",   light: "bg-teal-50",   border: "border-teal-200" },
+const COLOR_CLASSES: Record<string, { bg: string; dot: string }> = {
+  blue:    { bg: "bg-blue-600",    dot: "bg-blue-500" },
+  indigo:  { bg: "bg-indigo-600",  dot: "bg-indigo-500" },
+  violet:  { bg: "bg-violet-600",  dot: "bg-violet-500" },
+  purple:  { bg: "bg-purple-600",  dot: "bg-purple-500" },
+  pink:    { bg: "bg-pink-600",    dot: "bg-pink-500" },
+  rose:    { bg: "bg-rose-600",    dot: "bg-rose-500" },
+  red:     { bg: "bg-red-600",     dot: "bg-red-500" },
+  orange:  { bg: "bg-orange-500",  dot: "bg-orange-500" },
+  amber:   { bg: "bg-amber-500",   dot: "bg-amber-500" },
+  lime:    { bg: "bg-lime-600",    dot: "bg-lime-500" },
+  green:   { bg: "bg-green-600",   dot: "bg-green-500" },
+  emerald: { bg: "bg-emerald-600", dot: "bg-emerald-500" },
+  teal:    { bg: "bg-teal-600",    dot: "bg-teal-500" },
+  cyan:    { bg: "bg-cyan-600",    dot: "bg-cyan-500" },
+  sky:     { bg: "bg-sky-500",     dot: "bg-sky-400" },
 };
 
 function colorFor(color: string) {
@@ -89,7 +98,7 @@ export default function StudioPage() {
           <p className="text-sm text-gray-500">Select a product to see its recording checklist and upload videos.</p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => {
             const videos = videoMap[product.id] ?? [];
             const published = videos.filter((v) => v.published).length;
@@ -99,14 +108,23 @@ export default function StudioPage() {
               <Link
                 key={product.id}
                 href={`/studio/${product.slug}`}
-                className={`rounded-xl border p-5 hover:shadow-md transition-all ${c.light} ${c.border}`}
+                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-gray-300 transition-all group flex items-start gap-4"
               >
-                <div className="text-3xl mb-3">{product.emoji}</div>
-                <h2 className="font-semibold text-gray-900 mb-1">{product.name}</h2>
-                <p className="text-xs text-gray-500 mb-4">{product.description}</p>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{total} video{total !== 1 ? "s" : ""}</span>
-                  <span className="font-medium text-green-600">{published} published</span>
+                <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
+                  {product.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">{product.name}</h2>
+                  <p className="text-sm text-gray-500 leading-relaxed mb-3 line-clamp-2">{product.description}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`} />
+                      {total} video{total !== 1 ? "s" : ""}
+                    </span>
+                    {published > 0 && (
+                      <span className="text-green-600 font-medium">{published} published</span>
+                    )}
+                  </div>
                 </div>
               </Link>
             );
