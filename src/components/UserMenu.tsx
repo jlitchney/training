@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 interface Props {
   user: { name: string; role: string };
 }
 
 export function UserMenu({ user }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -20,12 +19,6 @@ export function UserMenu({ user }: Props) {
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
-
-  async function handleLogout() {
-    setOpen(false);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
 
   return (
     <div ref={ref} className="relative">
@@ -54,7 +47,7 @@ export function UserMenu({ user }: Props) {
             </Link>
           )}
           <button
-            onClick={handleLogout}
+            onClick={() => signOut({ callbackUrl: "/login" })}
             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Sign out
