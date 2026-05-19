@@ -131,28 +131,32 @@ export async function deleteProduct(slug: string): Promise<void> {
 }
 
 // ── Videos ──────────────────────────────────────────────────────────
-// Each video stored as its own key. The ordered ID list uses Redis native
-// list ops (LPUSH / LRANGE / LREM) so adding/removing is atomic — no
-// read-modify-write race condition on the list itself.
+// Each video stored as its own key. There is NO separate ID-list key.
+// getVideos derives the set of video IDs from the checklist — the
+// checklist is a single key per product and has proven reliable under
+// Vercel KV's global eventual-consistency replication. Since the
+// checklist link is always written AFTER the video is saved, if the
+// checklist says videoId=X then training:video:X is guaranteed to exist.
 function videoKey(videoId: string) { return `training:video:${videoId}`; }
-function videoIdsKey(productId: string) { return `training:video-ids:v2:${productId}`; }
 
 export async function getVideos(productId: string, publishedOnly = false): Promise<Video[]> {
-  let videos: Video[];
+  const checklist = await getChecklist(productId);
+  const videoIds = [...new Set(checklist.filter((i) => i.videoId).map((i) => i.videoId!))];
+  if (videoIds.length === 0) return [];
+
   if (!hasKV()) {
-    videos = memVideos[productId] ?? [];
-  } else {
-    try {
-      const db = await kv();
-      const ids = (await db.lrange(videoIdsKey(productId), 0, -1)) as string[];
-      if (!ids || ids.length === 0) return [];
-      const raw = await db.mget<(Video | null)[]>(...ids.map(videoKey));
-      videos = raw.filter((v): v is Video => v !== null);
-    } catch {
-      return [];
-    }
+    const all = (memVideos[productId] ?? []);
+    const videos = videoIds.map((id) => all.find((v) => v.id === id)).filter(Boolean) as Video[];
+    return publishedOnly ? videos.filter((v) => v.published) : videos;
   }
-  return publishedOnly ? videos.filter((v) => v.published) : videos;
+  try {
+    const db = await kv();
+    const raw = await db.mget<(Video | null)[]>(...videoIds.map(videoKey));
+    const videos = raw.filter((v): v is Video => v !== null);
+    return publishedOnly ? videos.filter((v) => v.published) : videos;
+  } catch {
+    return [];
+  }
 }
 
 export async function getVideo(productId: string, videoId: string): Promise<Video | null> {
@@ -176,9 +180,7 @@ export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Prom
     return newVideo;
   }
   const db = await kv();
-  // Write the video object, then atomically prepend its ID to the list
   await db.set(videoKey(newVideo.id), newVideo);
-  await db.lpush(videoIdsKey(video.productId), newVideo.id);
   return newVideo;
 }
 
@@ -191,7 +193,6 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
     return videos[idx];
   }
   const db = await kv();
-  // Single-key read/write — no list involved, no race condition with createVideo
   const existing = await db.get<Video>(videoKey(videoId));
   if (!existing) return null;
   const updated = { ...existing, ...patch };
@@ -206,7 +207,10 @@ export async function deleteVideo(productId: string, videoId: string): Promise<v
   }
   const db = await kv();
   await db.del(videoKey(videoId));
-  await db.lrem(videoIdsKey(productId), 1, videoId);
+  // Clear the checklist link so coverage counts stay accurate after deletion
+  const items = await getChecklist(productId);
+  const updated = items.map((i) => (i.videoId === videoId ? { ...i, videoId: undefined } : i));
+  await saveChecklist(productId, updated);
 }
 
 // ── Checklist ────────────────────────────────────────────────────────
