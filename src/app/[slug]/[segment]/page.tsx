@@ -397,7 +397,11 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
               More in {category ?? "this product"}
             </h2>
             <div className="space-y-3">
-              {related.filter((v) => v.id !== playing.id).slice(0, 6).map((v) => (
+              {related
+                .filter((v) => v.id !== playing.id)
+                .sort((a, b) => (a.id === video.id ? 1 : b.id === video.id ? -1 : 0))
+                .slice(0, 6)
+                .map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setActiveVideo(v)}
