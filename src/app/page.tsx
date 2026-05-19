@@ -100,16 +100,31 @@ export default function HomePage() {
             <img src="/logo-black.svg" alt="All-Star Training" className="h-8 w-auto" />
             <span className="text-sm text-gray-400 hidden sm:block">Video Knowledge Base</span>
           </div>
-          {session?.user ? (
-            <UserMenu user={{ name: session.user.name ?? session.user.email ?? "", role: (session.user as { role?: string }).role ?? "admin" }} />
-          ) : (
-            <Link
-              href="/studio"
-              className="text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 rounded-lg px-3 py-1.5 transition-colors"
-            >
-              Staff Login →
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {session?.user && (
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm">
+                  Knowledge Base
+                </span>
+                <Link
+                  href="/studio"
+                  className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Recording Studio
+                </Link>
+              </div>
+            )}
+            {session?.user ? (
+              <UserMenu user={{ name: session.user.name ?? session.user.email ?? "", role: (session.user as { role?: string }).role ?? "admin" }} />
+            ) : (
+              <Link
+                href="/studio"
+                className="text-xs font-medium text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Staff Login →
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 

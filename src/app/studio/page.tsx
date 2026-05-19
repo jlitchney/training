@@ -84,11 +84,21 @@ export default function StudioPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <img src="/logo-black.svg" alt="All-Star Training" className="h-7 w-auto" />
           <div className="flex items-center gap-3">
-            <img src="/logo-black.svg" alt="All-Star Training" className="h-7 w-auto" />
-            <span className="text-sm text-gray-500 hidden sm:block">KB Recording Studio</span>
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <Link
+                href="/"
+                className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Knowledge Base
+              </Link>
+              <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm">
+                Recording Studio
+              </span>
+            </div>
+            {user && <UserMenu user={user} />}
           </div>
-          {user && <UserMenu user={user} />}
         </div>
       </header>
 
