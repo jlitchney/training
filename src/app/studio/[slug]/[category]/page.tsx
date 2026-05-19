@@ -458,11 +458,11 @@ export default function StudioCategoryPage() {
                       <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                       Stop Recording
                     </button>
-                  ) : (
+                  ) : !linkedVideo ? (
                     <button onClick={startRecording} className={`flex items-center gap-2 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition-colors ${colorBg}`}>
                       ● Record Screen
                     </button>
-                  )}
+                  ) : null}
                   {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
                 </div>
               )}
