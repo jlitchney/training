@@ -117,8 +117,8 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 mb-1">{category}</h1>
-              <p className="text-sm text-gray-500">{videos.length} video{videos.length !== 1 ? "s" : ""} · {product.name}</p>
+              <h1 className="text-xl font-bold text-gray-900 mb-1">{product.name} – {category}</h1>
+              <p className="text-sm text-gray-500">{videos.length} video{videos.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
 
