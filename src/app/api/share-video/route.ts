@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
   });
 
   const resend = new Resend(apiKey);
-  const fromEmail = process.env.SHARE_FROM_EMAIL ?? "training@allstartalent.us";
+  const fromEmail = process.env.SHARE_FROM_EMAIL ?? "noreply@training.allstartalent.us";
 
   const { error } = await resend.emails.send({
     from: `All-Star Training <${fromEmail}>`,
