@@ -539,6 +539,10 @@ export default function StudioCategoryPage() {
                       className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors">
                       Edit
                     </button>
+                    <button onClick={startRecording} disabled={recording || uploading}
+                      className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors disabled:opacity-50">
+                      Re-record
+                    </button>
                     <button onClick={() => handleDelete(linkedVideo)} className="text-xs text-gray-400 hover:text-red-600 px-3 py-1 transition-colors ml-auto">
                       Delete
                     </button>
