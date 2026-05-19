@@ -50,20 +50,16 @@ function VideoCard({ video, slug, color, productName, category }: {
     const url = `${window.location.origin}/${slug}/${video.id}`;
     const subject = video.title;
     const lines = [
-      "Hi,",
-      "",
-      "I wanted to share this training video with you:",
-      "",
-      `📹 ${video.title}`,
+      video.title,
     ];
     if (video.description) {
       lines.push("", video.description);
     }
-    lines.push("", `▶ Watch the video: ${url}`);
+    lines.push("", `Watch: ${url}`);
     if (productName && category) {
-      lines.push("", `This video is part of the ${productName} › ${category} training library.`);
+      lines.push("", `${productName} › ${category}`);
     }
-    lines.push("", "—", "All-Star Training Knowledge Base", window.location.origin);
+    lines.push("—", "All-Star Training Knowledge Base");
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
   }
 
