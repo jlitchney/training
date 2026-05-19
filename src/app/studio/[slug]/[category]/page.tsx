@@ -8,7 +8,7 @@ import { UserMenu } from "@/components/UserMenu";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; }
 interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; }
-interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; order: number; }
+interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
 
 const COLOR_BG: Record<string, string> = {
   blue: "bg-blue-600", purple: "bg-purple-600", green: "bg-green-600",
@@ -121,7 +121,7 @@ export default function StudioCategoryPage() {
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
 
   const linkedVideo = useMemo(
-    () => (selectedItem?.videoId ? videos.find((v) => v.id === selectedItem.videoId) ?? null : null),
+    () => selectedItem?.video ?? (selectedItem?.videoId ? videos.find((v) => v.id === selectedItem.videoId) ?? null : null),
     [selectedItem, videos]
   );
 
@@ -285,13 +285,13 @@ export default function StudioCategoryPage() {
         const linkRes = await fetch("/api/checklist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "link", productId: slug, itemId: selectedItemId, videoId: video.id }),
+          body: JSON.stringify({ type: "link", productId: slug, itemId: selectedItemId, videoId: video.id, video }),
         });
         if (!linkRes.ok) {
           setUploadError("Video saved but failed to link to checklist item. Please reload and try again.");
           return;
         }
-        setChecklist((prev) => prev.map((i) => (i.id === selectedItemId ? { ...i, videoId: video.id } : i)));
+        setChecklist((prev) => prev.map((i) => (i.id === selectedItemId ? { ...i, videoId: video.id, video } : i)));
       }
 
       setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc("");
@@ -309,6 +309,9 @@ export default function StudioCategoryPage() {
     });
     if (res.ok) {
       setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, published: !v.published } : v)));
+      setChecklist((prev) => prev.map((i) =>
+        i.video?.id === video.id ? { ...i, video: { ...i.video, published: !video.published } } : i
+      ));
     } else {
       const err = await res.json().catch(() => ({}));
       setPublishError(`Failed: ${err.error ?? res.status}`);
@@ -324,6 +327,9 @@ export default function StudioCategoryPage() {
     });
     if (!res.ok) return;
     setVideos((prev) => prev.map((v) => (v.id === editVideo.id ? { ...v, title: editTitle, description: editDesc } : v)));
+    setChecklist((prev) => prev.map((i) =>
+      i.video?.id === editVideo.id ? { ...i, video: { ...i.video, title: editTitle, description: editDesc } } : i
+    ));
     setEditVideo(null);
   }
 
@@ -331,7 +337,7 @@ export default function StudioCategoryPage() {
     if (!confirm(`Delete "${video.title}"?`)) return;
     await fetch(`/api/videos/${video.id}?productId=${slug}`, { method: "DELETE" });
     setVideos((prev) => prev.filter((v) => v.id !== video.id));
-    setChecklist((prev) => prev.map((i) => (i.videoId === video.id ? { ...i, videoId: undefined } : i)));
+    setChecklist((prev) => prev.map((i) => (i.videoId === video.id ? { ...i, videoId: undefined, video: undefined } : i)));
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;

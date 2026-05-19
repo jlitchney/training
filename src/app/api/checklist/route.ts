@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.type === "link") {
-    await linkChecklistVideo(body.productId, body.itemId, body.videoId ?? null);
+    await linkChecklistVideo(body.productId, body.itemId, body.videoId ?? null, body.video);
     return NextResponse.json({ ok: true });
   }
 

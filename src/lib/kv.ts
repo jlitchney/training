@@ -30,6 +30,7 @@ export interface ChecklistItem {
   description?: string;
   category?: string;
   videoId?: string;
+  video?: Video; // embedded for reliable single-key reads
   order: number;
 }
 
@@ -141,6 +142,14 @@ function videoKey(videoId: string) { return `training:video:${videoId}`; }
 
 export async function getVideos(productId: string, publishedOnly = false): Promise<Video[]> {
   const checklist = await getChecklist(productId);
+
+  // Primary path: use embedded video objects from the reliable checklist key
+  const embeddedVideos = checklist.filter((i) => i.video).map((i) => i.video!);
+  if (embeddedVideos.length > 0) {
+    return publishedOnly ? embeddedVideos.filter((v) => v.published) : embeddedVideos;
+  }
+
+  // Fallback for old data without embedded videos
   const videoIds = [...new Set(checklist.filter((i) => i.videoId).map((i) => i.videoId!))];
   if (videoIds.length === 0) return [];
 
@@ -160,6 +169,12 @@ export async function getVideos(productId: string, publishedOnly = false): Promi
 }
 
 export async function getVideo(productId: string, videoId: string): Promise<Video | null> {
+  // Primary path: read from reliable checklist key
+  const checklist = await getChecklist(productId);
+  const item = checklist.find((i) => i.video?.id === videoId);
+  if (item?.video) return item.video;
+
+  // Fallback to individual key (old data or replication lag)
   if (!hasKV()) return (memVideos[productId] ?? []).find((v) => v.id === videoId) ?? null;
   try {
     const db = await kv();
@@ -188,28 +203,63 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
   if (!hasKV()) {
     const videos = memVideos[productId] ?? [];
     const idx = videos.findIndex((v) => v.id === videoId);
-    if (idx === -1) return null;
-    videos[idx] = { ...videos[idx], ...patch };
-    return videos[idx];
+    // Try checklist as source of truth first
+    const items = memChecklist[productId] ?? [];
+    const checklistItem = items.find((i) => i.video?.id === videoId || i.videoId === videoId);
+    const existing = videos[idx] ?? checklistItem?.video ?? null;
+    if (!existing) return null;
+    const updated = { ...existing, ...patch };
+    if (idx !== -1) videos[idx] = updated;
+    // Update embedded video in checklist
+    memChecklist[productId] = items.map((i) =>
+      i.videoId === videoId ? { ...i, video: updated } : i
+    );
+    return updated;
   }
-  const db = await kv();
-  const existing = await db.get<Video>(videoKey(videoId));
+
+  // Read existing video from checklist (reliable) or individual key (fallback for old data)
+  const checklist = await getChecklist(productId);
+  const checklistItem = checklist.find((i) => i.video?.id === videoId || i.videoId === videoId);
+  let existing = checklistItem?.video ?? null;
+
+  if (!existing) {
+    const db = await kv();
+    existing = await db.get<Video>(videoKey(videoId));
+  }
   if (!existing) return null;
+
   const updated = { ...existing, ...patch };
+
+  // Write individual key for backward compat
+  const db = await kv();
   await db.set(videoKey(videoId), updated);
+
+  // Embed updated video in checklist (write to the reliable key)
+  if (checklistItem) {
+    const updatedItems = checklist.map((i) =>
+      i.videoId === videoId ? { ...i, video: updated } : i
+    );
+    await saveChecklist(productId, updatedItems);
+  }
+
   return updated;
 }
 
 export async function deleteVideo(productId: string, videoId: string): Promise<void> {
   if (!hasKV()) {
     memVideos[productId] = (memVideos[productId] ?? []).filter((v) => v.id !== videoId);
+    memChecklist[productId] = (memChecklist[productId] ?? []).map((i) =>
+      i.videoId === videoId ? { ...i, videoId: undefined, video: undefined } : i
+    );
     return;
   }
   const db = await kv();
   await db.del(videoKey(videoId));
-  // Clear the checklist link so coverage counts stay accurate after deletion
+  // Clear the checklist link and embedded video
   const items = await getChecklist(productId);
-  const updated = items.map((i) => (i.videoId === videoId ? { ...i, videoId: undefined } : i));
+  const updated = items.map((i) =>
+    i.videoId === videoId ? { ...i, videoId: undefined, video: undefined } : i
+  );
   await saveChecklist(productId, updated);
 }
 
@@ -269,10 +319,17 @@ export async function updateChecklistItem(productId: string, itemId: string, pat
   return updated;
 }
 
-export async function linkChecklistVideo(productId: string, itemId: string, videoId: string | null): Promise<void> {
+export async function linkChecklistVideo(
+  productId: string,
+  itemId: string,
+  videoId: string | null,
+  video?: Video,
+): Promise<void> {
   const items = await getChecklist(productId);
   const updated = items.map((item) =>
-    item.id === itemId ? { ...item, videoId: videoId ?? undefined } : item
+    item.id === itemId
+      ? { ...item, videoId: videoId ?? undefined, video: videoId ? video : undefined }
+      : item
   );
   await saveChecklist(productId, updated);
 }
