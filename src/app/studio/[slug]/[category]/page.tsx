@@ -132,8 +132,13 @@ export default function StudioCategoryPage() {
   const colorText = COLOR_TEXT[product?.color ?? "blue"] ?? "text-blue-700";
 
   function selectItem(id: string) {
+    if (pendingBlobUrl && !confirm("You have an unsaved recording. Discard it and switch items?")) return;
     setSelectedItemId(id);
     setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc(""); setUploadError("");
+  }
+
+  function handleBreadcrumbNav(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (pendingBlobUrl && !confirm("You have an unsaved recording. Leave anyway?")) e.preventDefault();
   }
 
   async function handleAddItem() {
@@ -337,7 +342,7 @@ export default function StudioCategoryPage() {
       <header className="bg-white border-b border-gray-200 flex-shrink-0">
         <div className="px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href={`/studio/${slug}`} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <Link href={`/studio/${slug}`} onClick={handleBreadcrumbNav} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
               ← {product?.emoji} {product?.name}
             </Link>
             <span className="text-gray-300">/</span>
