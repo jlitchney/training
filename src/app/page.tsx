@@ -161,7 +161,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => {
+            {products.filter((product) => (allVideos[product.id] ?? []).length > 0).map((product) => {
               const videos = allVideos[product.id] ?? [];
               const c = colorFor(product.color);
               return (
