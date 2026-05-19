@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getChecklist, addChecklistItem, saveChecklist, linkChecklistVideo } from "@/lib/kv";
+import { getChecklist, addChecklistItem, saveChecklist, linkChecklistVideo, updateChecklistItem } from "@/lib/kv";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -31,6 +31,16 @@ export async function POST(req: NextRequest) {
   if (body.type === "reorder") {
     await saveChecklist(body.productId, body.items);
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.type === "update") {
+    const item = await updateChecklistItem(body.productId, body.itemId, {
+      title: body.title,
+      category: body.category,
+      description: body.description,
+    });
+    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(item);
   }
 
   if (body.type === "delete") {

@@ -245,6 +245,16 @@ export async function addChecklistItem(productId: string, title: string, descrip
   return newItem;
 }
 
+export async function updateChecklistItem(productId: string, itemId: string, patch: Partial<Pick<ChecklistItem, "title" | "description" | "category">>): Promise<ChecklistItem | null> {
+  const items = await getChecklist(productId);
+  const idx = items.findIndex((i) => i.id === itemId);
+  if (idx === -1) return null;
+  const updated = { ...items[idx], ...patch };
+  items[idx] = updated;
+  await saveChecklist(productId, items);
+  return updated;
+}
+
 export async function linkChecklistVideo(productId: string, itemId: string, videoId: string | null): Promise<void> {
   const items = await getChecklist(productId);
   const updated = items.map((item) =>

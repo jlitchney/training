@@ -89,11 +89,17 @@ export default function StudioProductPage() {
   const chunksRef = useRef<Blob[]>([]);
   const selectedItemRef = useRef<ChecklistItem | null>(null);
 
+  // Speech recognition
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const transcriptRef = useRef("");
+
   // Save form (inline, after recording)
   const [pendingBlobUrl, setPendingBlobUrl] = useState("");
   const [pendingDuration, setPendingDuration] = useState<number | undefined>();
   const [formTitle, setFormTitle] = useState("");
+  const [formCategory, setFormCategory] = useState("");
   const [formDesc, setFormDesc] = useState("");
+  const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Modals
@@ -170,6 +176,7 @@ export default function StudioProductPage() {
     setSelectedItemId(id);
     setPendingBlobUrl("");
     setFormTitle("");
+    setFormCategory("");
     setFormDesc("");
     setUploadError("");
   }
@@ -219,6 +226,27 @@ export default function StudioProductPage() {
       let micStream: MediaStream | null = null;
       try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { /* mic denied */ }
 
+      // Start speech recognition on the mic for live transcription
+      transcriptRef.current = "";
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SR) {
+          const recognition: SpeechRecognition = new SR();
+          recognition.continuous = true;
+          recognition.interimResults = false;
+          recognition.lang = "en-US";
+          recognition.onresult = (e: SpeechRecognitionEvent) => {
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+              if (e.results[i].isFinal) transcriptRef.current += e.results[i][0].transcript + " ";
+            }
+          };
+          recognition.onerror = () => {};
+          recognition.start();
+          recognitionRef.current = recognition;
+        }
+      } catch { /* speech recognition unavailable */ }
+
       const tracks = [...screenStream.getVideoTracks()];
       if (micStream) tracks.push(...micStream.getAudioTracks());
       const combinedStream = new MediaStream(tracks);
@@ -231,16 +259,19 @@ export default function StudioProductPage() {
         const duration = Math.round((Date.now() - startTime) / 1000);
         screenStream.getTracks().forEach((t) => t.stop());
         micStream?.getTracks().forEach((t) => t.stop());
+        try { recognitionRef.current?.stop(); } catch { /* ignore */ }
         setRecording(false);
         setUploading(true);
         try {
           const videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
           const result = await uploadBlob(videoBlob, `recording-${Date.now()}.webm`);
           if (result) {
+            const item = selectedItemRef.current;
             setPendingBlobUrl(result.url);
             setPendingDuration(duration);
-            setFormTitle(selectedItemRef.current?.title ?? "");
-            setFormDesc("");
+            setFormTitle(item?.title ?? "");
+            setFormCategory(item?.category ?? "");
+            setFormDesc(transcriptRef.current.trim());
           }
         } finally {
           setUploading(false);
@@ -257,6 +288,28 @@ export default function StudioProductPage() {
   }, []);
 
   const stopRecording = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
+
+  async function generateDescription() {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formTitle || selectedItem?.title,
+          category: formCategory || selectedItem?.category,
+          product: product?.name,
+          transcript: formDesc,
+        }),
+      });
+      if (res.ok) {
+        const { description } = await res.json();
+        if (description) setFormDesc(description);
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleSaveVideo() {
     if (!formTitle.trim() || !pendingBlobUrl) return;
@@ -278,6 +331,26 @@ export default function StudioProductPage() {
       setVideos((prev) => [video, ...prev]);
 
       if (selectedItemId) {
+        // Update checklist item title/category if changed
+        const orig = selectedItem;
+        if (orig && (formTitle !== orig.title || formCategory !== (orig.category ?? ""))) {
+          await fetch("/api/checklist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "update",
+              productId: slug,
+              itemId: selectedItemId,
+              title: formTitle,
+              category: formCategory || undefined,
+            }),
+          });
+          setChecklist((prev) =>
+            prev.map((i) => (i.id === selectedItemId ? { ...i, title: formTitle, category: formCategory || undefined } : i))
+          );
+        }
+
+        // Link video to checklist item
         await fetch("/api/checklist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -290,6 +363,7 @@ export default function StudioProductPage() {
 
       setPendingBlobUrl("");
       setFormTitle("");
+      setFormCategory("");
       setFormDesc("");
     } finally {
       setSaving(false);
@@ -516,27 +590,62 @@ export default function StudioProductPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
                   <h2 className="font-semibold text-gray-900 mb-4">Save Recording</h2>
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Title <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formTitle}
-                        onChange={(e) => setFormTitle(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                        autoFocus
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Title <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formTitle}
+                          onChange={(e) => setFormTitle(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                        <input
+                          type="text"
+                          value={formCategory}
+                          onChange={(e) => setFormCategory(e.target.value)}
+                          list="form-cat-list"
+                          placeholder="e.g. Workflows"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                        />
+                        <datalist id="form-cat-list">
+                          {categoryNames.map((c) => <option key={c} value={c} />)}
+                        </datalist>
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-gray-600">Description</label>
+                        <button
+                          onClick={generateDescription}
+                          disabled={generating}
+                          className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 transition-colors"
+                        >
+                          {generating ? (
+                            <>
+                              <span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin inline-block" />
+                              Generating…
+                            </>
+                          ) : (
+                            <>✨ Generate with AI</>
+                          )}
+                        </button>
+                      </div>
                       <textarea
                         value={formDesc}
                         onChange={(e) => setFormDesc(e.target.value)}
-                        rows={3}
+                        rows={4}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
-                        placeholder="Optional details about what this video covers…"
+                        placeholder={transcriptRef.current ? "Transcribing narration…" : "Describe what this video covers, or use ✨ Generate"}
                       />
+                      {formDesc && transcriptRef.current && formDesc === transcriptRef.current.trim() && (
+                        <p className="text-xs text-gray-400 mt-1">Transcribed from your narration · use ✨ Generate to polish</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-3 mt-4">
@@ -548,7 +657,7 @@ export default function StudioProductPage() {
                       {saving ? "Saving…" : "Save Video"}
                     </button>
                     <button
-                      onClick={() => { setPendingBlobUrl(""); setFormTitle(""); setFormDesc(""); }}
+                      onClick={() => { setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc(""); }}
                       className="flex-1 border border-gray-300 text-gray-700 text-sm rounded-lg py-2 hover:bg-gray-50 transition-colors"
                     >
                       Discard
