@@ -28,6 +28,7 @@ export interface ChecklistItem {
   productId: string;
   title: string;
   description?: string;
+  category?: string;
   videoId?: string;
   order: number;
 }
@@ -50,21 +51,21 @@ const DEFAULT_PRODUCTS: Product[] = [
 
 // Checklist items for All-Star Recruiter (derived from regression test features)
 const ASR_CHECKLIST: ChecklistItem[] = [
-  { id: "asr-01", productId: "all-star-recruiter", title: "Signing up and creating an account", order: 1 },
-  { id: "asr-02", productId: "all-star-recruiter", title: "Logging in and navigating the dashboard", order: 2 },
-  { id: "asr-03", productId: "all-star-recruiter", title: "Creating a new job posting", order: 3 },
-  { id: "asr-04", productId: "all-star-recruiter", title: "Managing and editing job postings", order: 4 },
-  { id: "asr-05", productId: "all-star-recruiter", title: "Reviewing and filtering applicants", order: 5 },
-  { id: "asr-06", productId: "all-star-recruiter", title: "Moving candidates through the pipeline", order: 6 },
-  { id: "asr-07", productId: "all-star-recruiter", title: "Scheduling interviews", order: 7 },
-  { id: "asr-08", productId: "all-star-recruiter", title: "Sending messages to candidates", order: 8 },
-  { id: "asr-09", productId: "all-star-recruiter", title: "Using bulk actions on candidates", order: 9 },
-  { id: "asr-10", productId: "all-star-recruiter", title: "Setting up your company profile", order: 10 },
-  { id: "asr-11", productId: "all-star-recruiter", title: "Configuring email notifications", order: 11 },
-  { id: "asr-12", productId: "all-star-recruiter", title: "Adding and managing team members", order: 12 },
-  { id: "asr-13", productId: "all-star-recruiter", title: "Using the candidate search and filters", order: 13 },
-  { id: "asr-14", productId: "all-star-recruiter", title: "Exporting reports and data", order: 14 },
-  { id: "asr-15", productId: "all-star-recruiter", title: "Managing integrations", order: 15 },
+  { id: "asr-01", productId: "all-star-recruiter", title: "Signing up and creating an account", category: "Getting Started", order: 1 },
+  { id: "asr-02", productId: "all-star-recruiter", title: "Logging in and navigating the dashboard", category: "Getting Started", order: 2 },
+  { id: "asr-03", productId: "all-star-recruiter", title: "Creating a new job posting", category: "Jobs", order: 3 },
+  { id: "asr-04", productId: "all-star-recruiter", title: "Managing and editing job postings", category: "Jobs", order: 4 },
+  { id: "asr-05", productId: "all-star-recruiter", title: "Reviewing and filtering applicants", category: "Applicants", order: 5 },
+  { id: "asr-06", productId: "all-star-recruiter", title: "Moving candidates through the pipeline", category: "Applicants", order: 6 },
+  { id: "asr-07", productId: "all-star-recruiter", title: "Scheduling interviews", category: "Applicants", order: 7 },
+  { id: "asr-08", productId: "all-star-recruiter", title: "Sending messages to candidates", category: "Applicants", order: 8 },
+  { id: "asr-09", productId: "all-star-recruiter", title: "Using bulk actions on candidates", category: "Applicants", order: 9 },
+  { id: "asr-10", productId: "all-star-recruiter", title: "Setting up your company profile", category: "Settings", order: 10 },
+  { id: "asr-11", productId: "all-star-recruiter", title: "Configuring email notifications", category: "Settings", order: 11 },
+  { id: "asr-12", productId: "all-star-recruiter", title: "Adding and managing team members", category: "Settings", order: 12 },
+  { id: "asr-13", productId: "all-star-recruiter", title: "Using the candidate search and filters", category: "Search & Reports", order: 13 },
+  { id: "asr-14", productId: "all-star-recruiter", title: "Exporting reports and data", category: "Search & Reports", order: 14 },
+  { id: "asr-15", productId: "all-star-recruiter", title: "Managing integrations", category: "Settings", order: 15 },
 ].map((item) => ({ description: "", ...item }));
 
 // ── KV helpers ──────────────────────────────────────────────────────
@@ -230,13 +231,14 @@ export async function saveChecklist(productId: string, items: ChecklistItem[]): 
   await db.set(checklistKey(productId), items);
 }
 
-export async function addChecklistItem(productId: string, title: string, description?: string): Promise<ChecklistItem> {
+export async function addChecklistItem(productId: string, title: string, description?: string, category?: string): Promise<ChecklistItem> {
   const items = await getChecklist(productId);
   const newItem: ChecklistItem = {
     id: uuidv4(),
     productId,
     title,
     description: description ?? "",
+    category,
     order: items.length + 1,
   };
   await saveChecklist(productId, [...items, newItem]);
