@@ -6,7 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; }
-interface ChecklistItem { id: string; category?: string; videoId?: string; }
+interface EmbeddedVideo { id: string; title: string; published: boolean; }
+interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; }
 
 const COLOR_BG: Record<string, string> = {
   blue: "bg-blue-600", purple: "bg-purple-600", green: "bg-green-600",
@@ -32,6 +33,7 @@ export default function StudioProductPage() {
 
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -55,16 +57,45 @@ export default function StudioProductPage() {
   }, [slug, router]);
 
   const categories = useMemo(() => {
-    const map = new Map<string, { total: number; covered: number }>();
+    const map = new Map<string, { total: number; covered: number; drafts: number }>();
     for (const item of checklist) {
       const cat = item.category?.trim() || "Uncategorized";
-      const cur = map.get(cat) ?? { total: 0, covered: 0 };
-      map.set(cat, { total: cur.total + 1, covered: cur.covered + (item.videoId ? 1 : 0) });
+      const cur = map.get(cat) ?? { total: 0, covered: 0, drafts: 0 };
+      const hasDraft = !!item.videoId && !item.video?.published;
+      map.set(cat, {
+        total: cur.total + 1,
+        covered: cur.covered + (item.videoId ? 1 : 0),
+        drafts: cur.drafts + (hasDraft ? 1 : 0),
+      });
     }
     return map;
   }, [checklist]);
 
   const totalCovered = checklist.filter((i) => i.videoId).length;
+
+  const draftItems = useMemo(
+    () => checklist.filter((i) => i.videoId && i.video && !i.video.published),
+    [checklist]
+  );
+
+  async function publishVideo(item: ChecklistItem) {
+    if (!item.video) return;
+    setPublishingId(item.video.id);
+    try {
+      const res = await fetch(`/api/videos/${item.video.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: slug, published: true }),
+      });
+      if (res.ok) {
+        setChecklist((prev) => prev.map((i) =>
+          i.video?.id === item.video!.id ? { ...i, video: { ...i.video!, published: true } } : i
+        ));
+      }
+    } finally {
+      setPublishingId(null);
+    }
+  }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
 
@@ -145,9 +176,9 @@ export default function StudioProductPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from(categories.entries()).map(([cat, { total, covered }]) => {
+            {Array.from(categories.entries()).map(([cat, { total, covered, drafts }]) => {
               const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
-              const complete = pct === 100 && total > 0;
+              const complete = pct === 100 && total > 0 && drafts === 0;
               return (
                 <Link
                   key={cat}
@@ -156,7 +187,14 @@ export default function StudioProductPage() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <h2 className="font-semibold text-gray-900 leading-snug">{cat}</h2>
-                    {complete && <span className="text-base flex-shrink-0 ml-2">✅</span>}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      {drafts > 0 && (
+                        <span className="text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5">
+                          {drafts} draft
+                        </span>
+                      )}
+                      {complete && <span className="text-base">✅</span>}
+                    </div>
                   </div>
                   <div className="w-full bg-white/60 rounded-full h-1.5 mb-2.5">
                     <div
@@ -171,6 +209,34 @@ export default function StudioProductPage() {
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {draftItems.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <span className="text-yellow-500">🟡</span>
+              Drafts pending publish ({draftItems.length})
+            </h2>
+            <div className="bg-white rounded-xl border border-yellow-200 divide-y divide-gray-100 overflow-hidden">
+              {draftItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between px-5 py-3 gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.video!.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {item.category ?? "Uncategorized"} · {item.title}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => publishVideo(item)}
+                    disabled={publishingId === item.video!.id}
+                    className="flex-shrink-0 text-xs font-medium bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 transition-colors"
+                  >
+                    {publishingId === item.video!.id ? "Publishing…" : "Publish"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>

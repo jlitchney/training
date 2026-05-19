@@ -142,6 +142,8 @@ export default function StudioCategoryPage() {
   }, [selectedItem, videos]);
 
   const categoryCovered = categoryItems.filter((i) => i.videoId).length;
+  const categoryPublished = categoryItems.filter((i) => i.video?.published).length;
+  const categoryDrafts = categoryCovered - categoryPublished;
   const published = videos.filter((v) => v.published).length;
   const colorBg = COLOR_BG[product?.color ?? "blue"] ?? "bg-blue-600";
   const colorBadge = COLOR_BADGE[product?.color ?? "blue"] ?? COLOR_BADGE.blue;
@@ -382,7 +384,10 @@ export default function StudioCategoryPage() {
                 <strong className={`font-semibold ${colorText}`}>{categoryCovered}</strong>
                 <span className="text-gray-400">/{categoryItems.length}</span> covered
               </span>
-              <span><strong className="font-semibold text-green-600">{published}</strong> published</span>
+              <span><strong className="font-semibold text-green-600">{categoryPublished}</strong> published</span>
+              {categoryDrafts > 0 && (
+                <span><strong className="font-semibold text-yellow-500">{categoryDrafts}</strong> draft</span>
+              )}
             </div>
             {user && <UserMenu user={user} />}
           </div>
@@ -439,6 +444,9 @@ export default function StudioCategoryPage() {
               categoryItems.map((item) => {
                 const isSelected = item.id === selectedItemId;
                 const isDone = !!item.videoId;
+                const isPublished = isDone && item.video?.published === true;
+                const isDraft = isDone && !isPublished;
+                const icon = isPublished ? "✅" : isDraft ? "🟡" : "⬜";
                 return (
                   <button
                     key={item.id}
@@ -447,7 +455,7 @@ export default function StudioCategoryPage() {
                       isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{isDone ? "✅" : "⬜"}</span>
+                    <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
                     <span className="leading-snug">{item.title}</span>
                   </button>
                 );
