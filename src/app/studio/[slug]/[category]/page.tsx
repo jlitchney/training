@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { UserMenu } from "@/components/UserMenu";
 
-interface Product { id: string; name: string; slug: string; color: string; emoji: string; }
+interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; }
 interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
 
@@ -602,12 +602,27 @@ export default function StudioCategoryPage() {
                       className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${linkedVideo.published ? "border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-600" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
                       {linkedVideo.published ? "Unpublish" : "Publish"}
                     </button>
-                    <button
-                      onClick={() => toggleVideoVisibility(linkedVideo)}
-                      className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(linkedVideo.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
-                    >
-                      {(linkedVideo.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
-                    </button>
+                    {(() => {
+                      const inheritedFrom =
+                        product?.visibility === "internal" ? "product"
+                        : (product?.categoryVisibility?.[decodedCategory] ?? "public") === "internal" ? "category"
+                        : null;
+                      return inheritedFrom ? (
+                        <span
+                          className="text-xs font-medium px-3 py-1 rounded-full border border-amber-200 text-amber-600 bg-amber-50"
+                          title={`Restricted by ${inheritedFrom} visibility`}
+                        >
+                          🔒 via {inheritedFrom}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => toggleVideoVisibility(linkedVideo)}
+                          className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(linkedVideo.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                        >
+                          {(linkedVideo.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                        </button>
+                      );
+                    })()}
                     <button onClick={() => { setEditVideo(linkedVideo); setEditTitle(linkedVideo.title); setEditDesc(linkedVideo.description); }}
                       className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors">
                       Edit

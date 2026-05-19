@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
 
-interface Product { id: string; name: string; slug: string; color: string; emoji: string; categoryVisibility?: Record<string, 'public' | 'internal'>; }
+interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface EmbeddedVideo { id: string; title: string; published: boolean; }
 interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; }
 
@@ -245,16 +245,22 @@ export default function StudioProductPage() {
                   <div className="flex items-start justify-between mb-3">
                     <h2 className="font-semibold text-gray-900 leading-snug">{cat}</h2>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCategoryVisibility(cat); }}
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                          (product?.categoryVisibility?.[cat] ?? "public") === "internal"
-                            ? "bg-amber-50 border-amber-200 text-amber-600"
-                            : "bg-white/60 border-gray-300 text-gray-400 hover:border-gray-400"
-                        }`}
-                      >
-                        {(product?.categoryVisibility?.[cat] ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
-                      </button>
+                      {product?.visibility === "internal" ? (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-600" title="Restricted by product visibility">
+                          🔒 via product
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCategoryVisibility(cat); }}
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                            (product?.categoryVisibility?.[cat] ?? "public") === "internal"
+                              ? "bg-amber-50 border-amber-200 text-amber-600"
+                              : "bg-white/60 border-gray-300 text-gray-400 hover:border-gray-400"
+                          }`}
+                        >
+                          {(product?.categoryVisibility?.[cat] ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                        </button>
+                      )}
                       {drafts > 0 && (
                         <span className="text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5">
                           {drafts} draft
