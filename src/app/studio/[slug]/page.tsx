@@ -9,30 +9,24 @@ interface Product { id: string; name: string; slug: string; color: string; emoji
 interface EmbeddedVideo { id: string; title: string; published: boolean; }
 interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; }
 
-const COLOR_BG: Record<string, string> = {
-  blue: "bg-blue-600", indigo: "bg-indigo-600", violet: "bg-violet-600",
-  purple: "bg-purple-600", pink: "bg-pink-600", rose: "bg-rose-600",
-  red: "bg-red-600", orange: "bg-orange-500", amber: "bg-amber-500",
-  lime: "bg-lime-600", green: "bg-green-600", emerald: "bg-emerald-600",
-  teal: "bg-teal-600", cyan: "bg-cyan-600", sky: "bg-sky-500",
+const COLOR_MAP: Record<string, { bg: string; iconBg: string; iconText: string; bar: string }> = {
+  blue:    { bg: "bg-blue-600",    iconBg: "bg-blue-50",    iconText: "text-blue-600",    bar: "bg-blue-500" },
+  indigo:  { bg: "bg-indigo-600",  iconBg: "bg-indigo-50",  iconText: "text-indigo-600",  bar: "bg-indigo-500" },
+  violet:  { bg: "bg-violet-600",  iconBg: "bg-violet-50",  iconText: "text-violet-600",  bar: "bg-violet-500" },
+  purple:  { bg: "bg-purple-600",  iconBg: "bg-purple-50",  iconText: "text-purple-600",  bar: "bg-purple-500" },
+  pink:    { bg: "bg-pink-600",    iconBg: "bg-pink-50",    iconText: "text-pink-600",    bar: "bg-pink-500" },
+  rose:    { bg: "bg-rose-600",    iconBg: "bg-rose-50",    iconText: "text-rose-600",    bar: "bg-rose-500" },
+  red:     { bg: "bg-red-600",     iconBg: "bg-red-50",     iconText: "text-red-600",     bar: "bg-red-500" },
+  orange:  { bg: "bg-orange-500",  iconBg: "bg-orange-50",  iconText: "text-orange-600",  bar: "bg-orange-500" },
+  amber:   { bg: "bg-amber-500",   iconBg: "bg-amber-50",   iconText: "text-amber-600",   bar: "bg-amber-500" },
+  lime:    { bg: "bg-lime-600",    iconBg: "bg-lime-50",    iconText: "text-lime-600",    bar: "bg-lime-500" },
+  green:   { bg: "bg-green-600",   iconBg: "bg-green-50",   iconText: "text-green-600",   bar: "bg-green-500" },
+  emerald: { bg: "bg-emerald-600", iconBg: "bg-emerald-50", iconText: "text-emerald-600", bar: "bg-emerald-500" },
+  teal:    { bg: "bg-teal-600",    iconBg: "bg-teal-50",    iconText: "text-teal-600",    bar: "bg-teal-500" },
+  cyan:    { bg: "bg-cyan-600",    iconBg: "bg-cyan-50",    iconText: "text-cyan-600",    bar: "bg-cyan-500" },
+  sky:     { bg: "bg-sky-500",     iconBg: "bg-sky-50",     iconText: "text-sky-500",     bar: "bg-sky-400" },
 };
-const COLOR_LIGHT: Record<string, string> = {
-  blue: "bg-blue-50 border-blue-200", indigo: "bg-indigo-50 border-indigo-200",
-  violet: "bg-violet-50 border-violet-200", purple: "bg-purple-50 border-purple-200",
-  pink: "bg-pink-50 border-pink-200", rose: "bg-rose-50 border-rose-200",
-  red: "bg-red-50 border-red-200", orange: "bg-orange-50 border-orange-200",
-  amber: "bg-amber-50 border-amber-200", lime: "bg-lime-50 border-lime-200",
-  green: "bg-green-50 border-green-200", emerald: "bg-emerald-50 border-emerald-200",
-  teal: "bg-teal-50 border-teal-200", cyan: "bg-cyan-50 border-cyan-200",
-  sky: "bg-sky-50 border-sky-200",
-};
-const COLOR_BAR: Record<string, string> = {
-  blue: "bg-blue-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
-  purple: "bg-purple-500", pink: "bg-pink-500", rose: "bg-rose-500",
-  red: "bg-red-500", orange: "bg-orange-500", amber: "bg-amber-500",
-  lime: "bg-lime-500", green: "bg-green-500", emerald: "bg-emerald-500",
-  teal: "bg-teal-500", cyan: "bg-cyan-500", sky: "bg-sky-400",
-};
+function col(color: string) { return COLOR_MAP[color] ?? COLOR_MAP.blue; }
 
 export default function StudioProductPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -126,9 +120,7 @@ export default function StudioProductPage() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
 
-  const colorBg = COLOR_BG[product?.color ?? "blue"] ?? "bg-blue-600";
-  const colorLight = COLOR_LIGHT[product?.color ?? "blue"] ?? "bg-blue-50 border-blue-200";
-  const colorBar = COLOR_BAR[product?.color ?? "blue"] ?? "bg-blue-500";
+  const c = col(product?.color ?? "blue");
 
   async function handleCreateCategory() {
     const name = newCatName.trim();
@@ -170,7 +162,7 @@ export default function StudioProductPage() {
           </div>
           <button
             onClick={() => { setShowNewCat(true); setNewCatName(""); setNewCatVisibility("public"); }}
-            className={`text-sm font-medium text-white rounded-lg px-4 py-2 transition-colors flex-shrink-0 ${colorBg}`}
+            className={`text-sm font-medium text-white rounded-lg px-4 py-2 transition-colors flex-shrink-0 ${c.bg}`}
           >
             + New Category
           </button>
@@ -232,7 +224,7 @@ export default function StudioProductPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {Array.from(categories.entries()).map(([cat, { total, covered, drafts }]) => {
               const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
               const complete = pct === 100 && total > 0 && drafts === 0;
@@ -240,11 +232,19 @@ export default function StudioProductPage() {
                 <Link
                   key={cat}
                   href={`/studio/${slug}/${encodeURIComponent(cat)}`}
-                  className={`rounded-xl border p-5 hover:shadow-md transition-all block ${colorLight}`}
+                  className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all group flex items-center gap-4"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h2 className="font-semibold text-gray-900 leading-snug">{cat}</h2>
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                  <div className={`w-11 h-11 rounded-xl ${c.iconBg} flex items-center justify-center flex-shrink-0`}>
+                    <svg className={`w-5 h-5 ${c.iconText}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h2 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight">{cat}</h2>
+                      {complete && <span className="text-sm flex-shrink-0">✅</span>}
+                    </div>
+                    <div className="flex items-center gap-1.5 mb-2">
                       {product?.visibility === "internal" ? (
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-600" title="Restricted by product visibility">
                           🔒 via product
@@ -255,7 +255,7 @@ export default function StudioProductPage() {
                           className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
                             (product?.categoryVisibility?.[cat] ?? "public") === "internal"
                               ? "bg-amber-50 border-amber-200 text-amber-600"
-                              : "bg-white/60 border-gray-300 text-gray-400 hover:border-gray-400"
+                              : "border-gray-200 text-gray-400 hover:border-gray-300"
                           }`}
                         >
                           {(product?.categoryVisibility?.[cat] ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
@@ -266,19 +266,20 @@ export default function StudioProductPage() {
                           {drafts} draft
                         </span>
                       )}
-                      {complete && <span className="text-base">✅</span>}
                     </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1 mb-1.5">
+                      <div
+                        className={`h-1 rounded-full transition-all ${complete ? "bg-green-500" : c.bar}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {covered}/{total} covered{pct > 0 && !complete ? ` · ${pct}%` : ""}
+                    </p>
                   </div>
-                  <div className="w-full bg-white/60 rounded-full h-1.5 mb-2.5">
-                    <div
-                      className={`h-1.5 rounded-full transition-all ${complete ? "bg-green-500" : colorBar}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{covered} / {total} covered</span>
-                    {pct > 0 && !complete && <span className="text-gray-400">{pct}%</span>}
-                  </div>
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               );
             })}
