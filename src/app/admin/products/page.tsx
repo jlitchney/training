@@ -315,9 +315,6 @@ export default function AdminProductsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full ${COLOR_DOT[product.color] ?? "bg-blue-500"}`} />
-                  <Link href={`/studio/${product.slug}`} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
-                    Studio →
-                  </Link>
                   <button
                     onClick={() => { setEditingId(product.id); setShowAdd(false); }}
                     className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
