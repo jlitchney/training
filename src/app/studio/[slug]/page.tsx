@@ -74,10 +74,17 @@ export default function StudioProductPage() {
   const [formChecklistId, setFormChecklistId] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Edit/publish modal
+  // Preview modal
+  const [previewVideo, setPreviewVideo] = useState<Video | null>(null);
+
+  // Edit modal
   const [editVideo, setEditVideo] = useState<Video | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editChecklistId, setEditChecklistId] = useState("");
+
+  // Publish error
+  const [publishError, setPublishError] = useState("");
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -211,6 +218,7 @@ export default function StudioProductPage() {
   }
 
   async function togglePublish(video: Video) {
+    setPublishError("");
     const res = await fetch(`/api/videos/${video.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -218,6 +226,9 @@ export default function StudioProductPage() {
     });
     if (res.ok) {
       setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, published: !v.published } : v)));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setPublishError(`Failed to ${video.published ? "unpublish" : "publish"}: ${err.error ?? res.status}`);
     }
   }
 
@@ -228,10 +239,33 @@ export default function StudioProductPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId: slug, title: editTitle, description: editDesc }),
     });
-    if (res.ok) {
-      setVideos((prev) => prev.map((v) => (v.id === editVideo.id ? { ...v, title: editTitle, description: editDesc } : v)));
-      setEditVideo(null);
+    if (!res.ok) return;
+    setVideos((prev) => prev.map((v) => (v.id === editVideo.id ? { ...v, title: editTitle, description: editDesc } : v)));
+
+    // Handle checklist link change
+    const currentLink = checklist.find((i) => i.videoId === editVideo.id);
+    const newChecklistId = editChecklistId;
+    if (currentLink?.id !== newChecklistId) {
+      // Unlink old item
+      if (currentLink) {
+        await fetch("/api/checklist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "link", productId: slug, itemId: currentLink.id, videoId: null }),
+        });
+        setChecklist((prev) => prev.map((i) => (i.id === currentLink.id ? { ...i, videoId: undefined } : i)));
+      }
+      // Link new item
+      if (newChecklistId) {
+        await fetch("/api/checklist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "link", productId: slug, itemId: newChecklistId, videoId: editVideo.id }),
+        });
+        setChecklist((prev) => prev.map((i) => (i.id === newChecklistId ? { ...i, videoId: editVideo.id } : i)));
+      }
     }
+    setEditVideo(null);
   }
 
   async function handleDelete(video: Video) {
@@ -294,6 +328,11 @@ export default function StudioProductPage() {
             {uploadError}
           </div>
         )}
+        {publishError && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+            {publishError}
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Checklist */}
@@ -343,7 +382,12 @@ export default function StudioProductPage() {
                         {video.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{video.description}</p>}
                         <p className="text-xs text-gray-400 mt-1">by {video.recordedBy} · {new Date(video.recordedAt).toLocaleDateString()}</p>
                       </div>
-                      <video src={blobSrc(video.blobUrl)} className="w-28 h-16 rounded object-cover flex-shrink-0 bg-gray-100" />
+                      <button onClick={() => setPreviewVideo(video)} className="flex-shrink-0 relative group">
+                        <video src={blobSrc(video.blobUrl)} className="w-28 h-16 rounded object-cover bg-gray-100" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-white text-lg">▶</span>
+                        </div>
+                      </button>
                     </div>
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                       <button
@@ -357,7 +401,13 @@ export default function StudioProductPage() {
                         {video.published ? "Unpublish" : "Publish"}
                       </button>
                       <button
-                        onClick={() => { setEditVideo(video); setEditTitle(video.title); setEditDesc(video.description); }}
+                        onClick={() => {
+                        setEditVideo(video);
+                        setEditTitle(video.title);
+                        setEditDesc(video.description);
+                        const linked = checklist.find((i) => i.videoId === video.id);
+                        setEditChecklistId(linked?.id ?? "");
+                      }}
                         className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors"
                       >
                         Edit
@@ -439,6 +489,24 @@ export default function StudioProductPage() {
         </div>
       )}
 
+      {/* Preview modal */}
+      {previewVideo && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setPreviewVideo(null)}>
+          <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-white">{previewVideo.title}</h2>
+              <button onClick={() => setPreviewVideo(null)} className="text-white/60 hover:text-white text-2xl leading-none">×</button>
+            </div>
+            <video
+              src={blobSrc(previewVideo.blobUrl)}
+              controls
+              autoPlay
+              className="w-full rounded-xl bg-black"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Edit video modal */}
       {editVideo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -462,6 +530,19 @@ export default function StudioProductPage() {
                   rows={3}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Checklist item</label>
+                <select
+                  value={editChecklistId}
+                  onChange={(e) => setEditChecklistId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">— None —</option>
+                  {checklist.filter((i) => !i.videoId || i.videoId === editVideo?.id).map((item) => (
+                    <option key={item.id} value={item.id}>{item.title}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
