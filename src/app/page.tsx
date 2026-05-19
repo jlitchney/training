@@ -54,7 +54,7 @@ export default function HomePage() {
         const videoMap: Record<string, Video[]> = {};
         await Promise.all(
           prods.map(async (p) => {
-            const res = await fetch(`/api/videos?productId=${p.id}`);
+            const res = await fetch(`/api/videos?productId=${p.id}&publishedOnly=true`);
             videoMap[p.id] = await res.json();
           })
         );

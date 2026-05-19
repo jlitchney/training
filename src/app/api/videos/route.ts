@@ -7,7 +7,9 @@ export async function GET(req: NextRequest) {
   if (!productId) return NextResponse.json({ error: "Missing productId" }, { status: 400 });
 
   const session = await getSession();
-  const publishedOnly = !session; // unauthenticated users see only published
+  // Public pages pass publishedOnly=true explicitly; studio omits it to see drafts
+  const forcePublished = req.nextUrl.searchParams.get("publishedOnly") === "true";
+  const publishedOnly = !session || forcePublished;
   const videos = await getVideos(productId, publishedOnly);
   return NextResponse.json(videos, {
     headers: { "Cache-Control": "no-store" },

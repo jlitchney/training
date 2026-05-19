@@ -49,7 +49,7 @@ export default function ProductPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/products").then((r) => r.json()),
-      fetch(`/api/videos?productId=${slug}`).then((r) => r.json()),
+      fetch(`/api/videos?productId=${slug}&publishedOnly=true`).then((r) => r.json()),
     ]).then(([prods, vids]: [Product[], Video[]]) => {
       setProduct(prods.find((p) => p.slug === slug) ?? null);
       setVideos(vids);
