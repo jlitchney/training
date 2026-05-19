@@ -234,7 +234,8 @@ export default function AdminProductsPage() {
         body: JSON.stringify(f),
       });
       if (res.ok) {
-        setProducts((prev) => [...prev, await res.json()]);
+        const product: Product = await res.json();
+        setProducts((prev) => [...prev, product]);
         setShowAdd(false);
       }
     } finally {
