@@ -8,6 +8,8 @@ export interface Product {
   color: string;   // e.g. "blue", "purple", "green"
   emoji: string;
   order: number;
+  visibility?: 'public' | 'internal';
+  categoryVisibility?: Record<string, 'public' | 'internal'>;
 }
 
 export interface Video {
@@ -21,6 +23,7 @@ export interface Video {
   recordedAt: string;
   duration?: number; // seconds
   tags?: string[];
+  visibility?: 'public' | 'internal';
 }
 
 export interface ChecklistItem {

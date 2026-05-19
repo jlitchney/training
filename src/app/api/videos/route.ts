@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getVideos, createVideo } from "@/lib/kv";
+import { getVideos, createVideo, getProduct, getChecklist } from "@/lib/kv";
 
 export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get("productId");
   if (!productId) return NextResponse.json({ error: "Missing productId" }, { status: 400 });
 
   const session = await getSession();
-  // Public pages pass publishedOnly=true explicitly; studio omits it to see drafts
   const forcePublished = req.nextUrl.searchParams.get("publishedOnly") === "true";
   const publishedOnly = !session || forcePublished;
-  const videos = await getVideos(productId, publishedOnly);
+  let videos = await getVideos(productId, publishedOnly);
+
+  if (!session) {
+    videos = videos.filter((v) => v.visibility !== "internal");
+
+    const product = await getProduct(productId);
+    const catViz = product?.categoryVisibility ?? {};
+    const internalCats = Object.entries(catViz)
+      .filter(([, v]) => v === "internal")
+      .map(([k]) => k);
+
+    if (internalCats.length > 0) {
+      const checklist = await getChecklist(productId);
+      const videoToCat: Record<string, string> = {};
+      for (const item of checklist) {
+        const vid = item.video?.id ?? item.videoId;
+        if (vid && item.category) videoToCat[vid] = item.category;
+      }
+      videos = videos.filter((v) => !internalCats.includes(videoToCat[v.id]));
+    }
+  }
+
   return NextResponse.json(videos, {
     headers: { "Cache-Control": "no-store" },
   });

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChecklist } from "@/lib/kv";
+import { getChecklist, getProduct } from "@/lib/kv";
+import { getSession } from "@/lib/auth";
 
-// Public endpoint — returns a videoId → category map for a product.
-// Used by the public video page to filter related videos by category.
 export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get("productId");
   if (!productId) return NextResponse.json({}, { status: 400 });
@@ -14,5 +13,15 @@ export async function GET(req: NextRequest) {
     if (item.video?.id) map[item.video.id] = item.category;
     else if (item.videoId) map[item.videoId] = item.category;
   }
+
+  const session = await getSession();
+  if (!session) {
+    const product = await getProduct(productId);
+    const catViz = product?.categoryVisibility ?? {};
+    for (const videoId of Object.keys(map)) {
+      if (catViz[map[videoId]] === "internal") delete map[videoId];
+    }
+  }
+
   return NextResponse.json(map, { headers: { "Cache-Control": "no-store" } });
 }

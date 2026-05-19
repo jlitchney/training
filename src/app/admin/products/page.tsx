@@ -12,6 +12,7 @@ interface Product {
   description: string;
   color: string;
   emoji: string;
+  visibility?: 'public' | 'internal';
 }
 
 const COLORS: { name: string; swatch: string }[] = [
@@ -142,8 +143,8 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (e: string)
   );
 }
 
-interface FormState { name: string; slug: string; description: string; color: string; emoji: string; }
-const BLANK: FormState = { name: "", slug: "", description: "", color: "blue", emoji: "⭐" };
+interface FormState { name: string; slug: string; description: string; color: string; emoji: string; visibility: 'public' | 'internal'; }
+const BLANK: FormState = { name: "", slug: "", description: "", color: "blue", emoji: "⭐", visibility: "public" };
 
 function ProductForm({
   initial,
@@ -206,6 +207,26 @@ function ProductForm({
       <div>
         <label className="block text-xs text-gray-500 mb-2">Icon</label>
         <EmojiPicker value={f.emoji} onChange={set("emoji")} />
+      </div>
+
+      <div>
+        <label className="block text-xs text-gray-500 mb-2">Visibility</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => set("visibility")("public")}
+            className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${f.visibility === "public" ? "bg-green-50 border-green-300 text-green-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+          >
+            🌐 Public
+          </button>
+          <button
+            type="button"
+            onClick={() => set("visibility")("internal")}
+            className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${f.visibility === "internal" ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+          >
+            🔒 Internal
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 pt-1">
@@ -275,7 +296,7 @@ export default function AdminProductsPage() {
       const res = await fetch(`/api/products/${product.slug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: f.name, description: f.description, color: f.color, emoji: f.emoji }),
+        body: JSON.stringify({ name: f.name, description: f.description, color: f.color, emoji: f.emoji, visibility: f.visibility }),
       });
       if (res.ok) {
         const updated: Product = await res.json();
@@ -325,7 +346,7 @@ export default function AdminProductsPage() {
               <ProductForm
                 key={product.id}
                 isNew={false}
-                initial={{ name: product.name, slug: product.slug, description: product.description, color: product.color, emoji: product.emoji }}
+                initial={{ name: product.name, slug: product.slug, description: product.description, color: product.color, emoji: product.emoji, visibility: product.visibility ?? "public" }}
                 onSave={(f) => handleEdit(product, f)}
                 onCancel={() => setEditingId(null)}
                 saving={saving}
@@ -340,6 +361,9 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${(product.visibility ?? "public") === "internal" ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-gray-50 border-gray-200 text-gray-400"}`}>
+                    {(product.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                  </span>
                   <span className={`w-2.5 h-2.5 rounded-full ${COLOR_DOT[product.color] ?? "bg-blue-500"}`} />
                   <button
                     onClick={() => { setEditingId(product.id); setShowAdd(false); }}

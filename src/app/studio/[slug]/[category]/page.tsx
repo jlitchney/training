@@ -7,7 +7,7 @@ import { upload } from "@vercel/blob/client";
 import { UserMenu } from "@/components/UserMenu";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; }
-interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; }
+interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; }
 interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
 
 const COLOR_BG: Record<string, string> = {
@@ -367,6 +367,21 @@ export default function StudioCategoryPage() {
     setEditVideo(null);
   }
 
+  async function toggleVideoVisibility(video: Video) {
+    const next = (video.visibility ?? "public") === "internal" ? "public" : "internal";
+    const res = await fetch(`/api/videos/${video.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: slug, visibility: next }),
+    });
+    if (res.ok) {
+      const updated = { ...video, visibility: next } as Video;
+      cacheVideo(updated);
+      setVideos((prev) => prev.map((v) => (v.id === video.id ? updated : v)));
+      setChecklist((prev) => prev.map((i) => (i.video?.id === video.id ? { ...i, video: updated } : i)));
+    }
+  }
+
   async function handleDelete(video: Video) {
     if (!confirm(`Delete "${video.title}"?`)) return;
     await fetch(`/api/videos/${video.id}?productId=${slug}`, { method: "DELETE" });
@@ -586,6 +601,12 @@ export default function StudioCategoryPage() {
                     <button onClick={() => togglePublish(linkedVideo)}
                       className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${linkedVideo.published ? "border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-600" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
                       {linkedVideo.published ? "Unpublish" : "Publish"}
+                    </button>
+                    <button
+                      onClick={() => toggleVideoVisibility(linkedVideo)}
+                      className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(linkedVideo.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                    >
+                      {(linkedVideo.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
                     </button>
                     <button onClick={() => { setEditVideo(linkedVideo); setEditTitle(linkedVideo.title); setEditDesc(linkedVideo.description); }}
                       className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors">

@@ -3,8 +3,10 @@ import { getSession } from "@/lib/auth";
 import { getProducts, createProduct } from "@/lib/kv";
 
 export async function GET() {
+  const session = await getSession();
   const products = await getProducts();
-  return NextResponse.json(products);
+  const visible = session ? products : products.filter((p) => p.visibility !== "internal");
+  return NextResponse.json(visible);
 }
 
 export async function POST(req: NextRequest) {
