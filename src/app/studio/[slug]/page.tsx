@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 
 interface Product {
   id: string;
@@ -109,18 +110,19 @@ export default function StudioProductPage() {
       .catch(() => router.push("/login"));
   }, [slug, router]);
 
-  async function uploadBlob(blob: Blob, filename: string): Promise<{ url: string; duration?: number } | null> {
+  async function uploadBlob(blob: Blob, filename: string): Promise<{ url: string } | null> {
     setUploadError("");
-    const fd = new FormData();
-    fd.append("file", blob, filename);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      setUploadError(`Upload failed (${res.status}): ${err.error ?? "unknown error"}`);
+    try {
+      const result = await upload(filename, blob, {
+        access: "private",
+        handleUploadUrl: "/api/upload",
+      });
+      return { url: result.url };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setUploadError(`Upload failed: ${msg}`);
       return null;
     }
-    const { url } = await res.json();
-    return { url };
   }
 
   const startRecording = useCallback(async () => {
