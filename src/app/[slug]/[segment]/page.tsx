@@ -110,14 +110,19 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
 
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-3 mb-1">
-            <span className={`w-2 h-2 rounded-full ${c.bg}`} />
-            <span className={`text-xs font-medium uppercase tracking-wide ${c.text}`}>{product.name}</span>
+          <div className="flex items-start gap-4 mb-6">
+            <div className={`w-14 h-14 rounded-2xl ${c.bg} flex items-center justify-center flex-shrink-0`}>
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 mb-1">{category}</h1>
+              <p className="text-sm text-gray-500">{videos.length} video{videos.length !== 1 ? "s" : ""} · {product.name}</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">{category}</h1>
-          <p className="text-sm text-gray-400 mb-6">{videos.length} video{videos.length !== 1 ? "s" : ""}</p>
 
-          <div className="relative max-w-lg">
+          <div className="relative max-w-xl">
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
             </svg>
