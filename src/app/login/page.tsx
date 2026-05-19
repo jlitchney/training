@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm w-full max-w-sm p-8">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">All-Star Training</h1>
+          <img src="/logo-black.svg" alt="All-Star Training" className="h-8 w-auto mx-auto mb-3" />
           <p className="text-sm text-gray-500">Sign in to continue</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

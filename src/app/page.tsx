@@ -85,7 +85,7 @@ export default function HomePage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-gray-900">All-Star Training</span>
+            <img src="/logo-black.svg" alt="All-Star Training" className="h-8 w-auto" />
             <span className="text-sm text-gray-400 hidden sm:block">Video Knowledge Base</span>
           </div>
           <Link

@@ -81,7 +81,9 @@ export default function VideoPage() {
     <div className="min-h-screen bg-gray-950">
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-          <Link href="/" className="text-sm text-gray-400 hover:text-white transition-colors">All-Star Training</Link>
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            <img src="/logo-white.svg" alt="All-Star Training" className="h-7 w-auto" />
+          </Link>
           <span className="text-gray-700">/</span>
           <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors">
             {product.emoji} {product.name}
