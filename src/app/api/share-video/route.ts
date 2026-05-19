@@ -22,6 +22,32 @@ const COLOR_HEX: Record<string, { bg: string; light: string; text: string }> = {
 
 function c(color: string) { return COLOR_HEX[color] ?? COLOR_HEX.blue; }
 
+function buildText({
+  product, video, category, relatedVideos, message, origin,
+}: {
+  product: { name: string; slug: string; color: string; emoji: string };
+  video: { id: string; title: string; description?: string };
+  category: string;
+  relatedVideos: { id: string; title: string }[];
+  message?: string;
+  origin: string;
+}) {
+  const videoUrl = `${origin}/${product.slug}/${video.id}`;
+  const lines: string[] = [];
+  if (message) { lines.push(message, ""); }
+  lines.push(video.title);
+  if (video.description) lines.push(video.description);
+  lines.push("", `Watch: ${videoUrl}`);
+  if (relatedVideos.length > 0) {
+    lines.push("", `More in ${category}:`);
+    for (const v of relatedVideos) {
+      lines.push(`- ${v.title}`, `  ${origin}/${product.slug}/${v.id}`);
+    }
+  }
+  lines.push("", `— All-Star Training (${origin}/${product.slug})`);
+  return lines.join("\n");
+}
+
 function buildEmail({
   product, video, category, relatedVideos, message, origin,
 }: {
@@ -167,14 +193,16 @@ export async function POST(req: NextRequest) {
     .filter((v) => v.id !== videoId && catMap[v.id] === category)
     .slice(0, 4);
 
-  const html = buildEmail({
+  const emailArgs = {
     product,
     video: { id: video.id, title: video.title, description: video.description },
     category: category ?? "Training",
     relatedVideos: related,
     message,
     origin,
-  });
+  };
+  const html = buildEmail(emailArgs);
+  const text = buildText(emailArgs);
 
   const resend = new Resend(apiKey);
   const fromEmail = process.env.SHARE_FROM_EMAIL ?? "noreply@training.allstartalent.us";
@@ -184,6 +212,7 @@ export async function POST(req: NextRequest) {
     to,
     subject: video.title,
     html,
+    text,
   });
 
   if (error) {
