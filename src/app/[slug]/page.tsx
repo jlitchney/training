@@ -176,49 +176,31 @@ export default function ProductPage() {
           </div>
         ) : (
           /* Category cards */
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {categories.map((cat) => {
               const catVids = categoryVideos.get(cat) ?? [];
-              const preview = catVids[0];
               return (
                 <Link
                   key={cat}
                   href={`/${slug}/${encodeURIComponent(cat)}`}
-                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all group flex flex-col"
+                  className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all group"
                 >
-                  {/* Preview thumbnail strip */}
-                  <div className={`relative h-32 ${c.light} flex items-center justify-center overflow-hidden`}>
-                    {preview?.blobUrl ? (
-                      <video
-                        src={blobSrc(preview.blobUrl)}
-                        preload="metadata"
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className={`text-4xl opacity-30`}>{product.emoji}</span>
-                    )}
-                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
-                    <div className="absolute bottom-2 right-2">
-                      <span className="bg-black/60 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-                        {catVids.length} video{catVids.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${c.light} flex items-center justify-center flex-shrink-0`}>
-                      <span className={`text-sm ${c.text}`}>▶</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                        {cat}
-                      </h2>
-                    </div>
-                    <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <div className={`w-11 h-11 rounded-xl ${c.light} flex items-center justify-center flex-shrink-0`}>
+                    <svg className={`w-5 h-5 ${c.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight">
+                      {cat}
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {catVids.length} video{catVids.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               );
             })}
