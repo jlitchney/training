@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserMenu } from "@/components/UserMenu";
 
 interface Product {
   id: string;
@@ -21,6 +22,7 @@ const COLOR_DOT: Record<string, string> = {
 
 export default function AdminProductsPage() {
   const router = useRouter();
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +40,7 @@ export default function AdminProductsPage() {
       return r.json();
     }).then((u) => {
       if (!u || u.role !== "admin") { router.push("/studio"); return; }
+      setUser(u);
       return fetch("/api/products").then((r) => r.json());
     }).then((prods?: Product[]) => {
       if (!prods) return;
@@ -77,10 +80,13 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
-          <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
-          <span className="text-gray-300">/</span>
-          <span className="font-semibold text-gray-900">Products</span>
+        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
+            <span className="text-gray-300">/</span>
+            <span className="font-semibold text-gray-900">Products</span>
+          </div>
+          {user && <UserMenu user={user} />}
         </div>
       </header>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserMenu } from "@/components/UserMenu";
 
 interface AppUser {
   email: string;
@@ -14,6 +15,7 @@ interface AppUser {
 
 export default function AdminUsersPage() {
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<{ name: string; role: string } | null>(null);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentEmail, setCurrentEmail] = useState("");
@@ -42,6 +44,7 @@ export default function AdminUsersPage() {
       return r.json();
     }).then((u) => {
       if (!u || u.role !== "admin") { router.push("/studio"); return; }
+      setCurrentUser(u);
       setCurrentEmail(u.email);
       return fetch("/api/users").then((r) => r.json());
     }).then((data?: AppUser[]) => {
@@ -104,10 +107,13 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
-          <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
-          <span className="text-gray-300">/</span>
-          <span className="font-semibold text-gray-900">Users</span>
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
+            <span className="text-gray-300">/</span>
+            <span className="font-semibold text-gray-900">Users</span>
+          </div>
+          {currentUser && <UserMenu user={currentUser} />}
         </div>
       </header>
 

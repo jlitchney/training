@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import { UserMenu } from "@/components/UserMenu";
 
 interface Product {
   id: string;
@@ -417,10 +418,12 @@ export default function StudioProductPage() {
             <span className="text-gray-300">/</span>
             <span className="font-semibold text-gray-900 text-sm">{product?.emoji} {product?.name}</span>
           </div>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span><strong className={`font-semibold ${colorText}`}>{covered}</strong><span className="text-gray-400">/{checklist.length}</span> covered</span>
-            <span><strong className="font-semibold text-green-600">{published}</strong> published</span>
-            <span className="hidden sm:block">Hi, {user?.name}</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <span><strong className={`font-semibold ${colorText}`}>{covered}</strong><span className="text-gray-400">/{checklist.length}</span> covered</span>
+              <span><strong className="font-semibold text-green-600">{published}</strong> published</span>
+            </div>
+            {user && <UserMenu user={user} />}
           </div>
         </div>
       </header>

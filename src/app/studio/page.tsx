@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserMenu } from "@/components/UserMenu";
 
 interface Product {
   id: string;
@@ -66,11 +67,6 @@ export default function StudioPage() {
       .catch(() => router.push("/login"));
   }, [router]);
 
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
   }
@@ -82,24 +78,8 @@ export default function StudioPage() {
           <div className="flex items-center gap-3">
             <img src="/logo-black.svg" alt="All-Star Training" className="h-7 w-auto" />
             <span className="text-sm text-gray-500 hidden sm:block">Recording Studio</span>
-            {user?.role === "admin" && (
-              <Link
-                href="/admin"
-                className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 rounded px-2 py-0.5 transition-colors"
-              >
-                Admin
-              </Link>
-            )}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">Hi, {user?.name}</span>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-gray-500 hover:text-gray-900 border border-gray-200 rounded px-3 py-1.5 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
+          {user && <UserMenu user={user} />}
         </div>
       </header>
 
