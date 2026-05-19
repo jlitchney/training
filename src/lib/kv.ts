@@ -156,14 +156,22 @@ export async function getVideo(productId: string, videoId: string): Promise<Vide
   return videos.find((v) => v.id === videoId) ?? null;
 }
 
+// Direct KV read used by write operations — propagates errors instead of
+// returning [] on failure, which would silently wipe existing data on write.
+async function readVideosForWrite(productId: string): Promise<Video[]> {
+  if (!hasKV()) return memVideos[productId] ?? [];
+  const db = await kv();
+  return (await db.get<Video[]>(videosKey(productId))) ?? [];
+}
+
 export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Promise<Video> {
   const newVideo: Video = {
     ...video,
     id: uuidv4(),
     recordedAt: new Date().toISOString(),
   };
-  const videos = await getVideos(video.productId);
-  const updated = [newVideo, ...videos];
+  const existing = await readVideosForWrite(video.productId);
+  const updated = [newVideo, ...existing];
   if (!hasKV()) {
     memVideos[video.productId] = updated;
   } else {
@@ -174,7 +182,7 @@ export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Prom
 }
 
 export async function updateVideo(productId: string, videoId: string, patch: Partial<Video>): Promise<Video | null> {
-  const videos = await getVideos(productId);
+  const videos = await readVideosForWrite(productId);
   const idx = videos.findIndex((v) => v.id === videoId);
   if (idx === -1) return null;
   const updated = { ...videos[idx], ...patch };
@@ -189,7 +197,7 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
 }
 
 export async function deleteVideo(productId: string, videoId: string): Promise<void> {
-  const videos = await getVideos(productId);
+  const videos = await readVideosForWrite(productId);
   const filtered = videos.filter((v) => v.id !== videoId);
   if (!hasKV()) {
     memVideos[productId] = filtered;
