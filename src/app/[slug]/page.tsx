@@ -75,7 +75,8 @@ export default function ProductPage() {
   const searchResults = useMemo(() => {
     if (!query) return [];
     return videos.filter((v) =>
-      v.title.toLowerCase().includes(query) || v.description?.toLowerCase().includes(query)
+      v.title.toLowerCase().includes(query) ||
+      (v.description ?? "").replace(/<[^>]*>/g, " ").toLowerCase().includes(query)
     );
   }, [videos, query]);
 
@@ -170,7 +171,10 @@ export default function ProductPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">{v.title}</p>
-                    {v.description && <p className="text-xs text-gray-400 truncate mt-0.5">{v.description}</p>}
+                    {v.description && (
+                        <div className="text-xs text-gray-400 truncate mt-0.5 [&_ul]:list-disc [&_ul]:pl-4 [&_a]:underline [&_strong]:font-semibold"
+                          dangerouslySetInnerHTML={{ __html: v.description }} />
+                      )}
                   </div>
                   {catMap[v.id] && (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${c.light} ${c.text} font-medium flex-shrink-0`}>

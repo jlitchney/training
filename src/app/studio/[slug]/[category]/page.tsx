@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { UserMenu } from "@/components/UserMenu";
+import { RichTextEditor, stripHtml } from "@/components/RichTextEditor";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; }
@@ -342,7 +343,8 @@ export default function StudioCategoryPage() {
             setPendingDuration(duration);
             setFormTitle(item?.title ?? "");
             setFormCategory(item?.category ?? decodedCategory);
-            setFormDesc(transcriptRef.current.trim());
+            const transcript = transcriptRef.current.trim();
+            setFormDesc(transcript ? `<p>${transcript}</p>` : "");
           }
         } finally {
           setUploading(false);
@@ -366,11 +368,11 @@ export default function StudioCategoryPage() {
       const res = await fetch("/api/generate-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: formTitle || selectedItem?.title, category: formCategory || decodedCategory, product: product?.name, transcript: formDesc }),
+        body: JSON.stringify({ title: formTitle || selectedItem?.title, category: formCategory || decodedCategory, product: product?.name, transcript: stripHtml(formDesc) }),
       });
       if (res.ok) {
         const { description } = await res.json();
-        if (description) setFormDesc(description);
+        if (description) setFormDesc(`<p>${description}</p>`);
       }
     } finally {
       setGenerating(false);
@@ -652,8 +654,11 @@ export default function StudioCategoryPage() {
                           ) : <>✨ Generate with AI</>}
                         </button>
                       </div>
-                      <textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={4} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
-                        placeholder="Describe what this video covers, or use ✨ Generate" />
+                      <RichTextEditor
+                        value={formDesc}
+                        onChange={setFormDesc}
+                        placeholder="Describe what this video covers, or use ✨ Generate"
+                      />
                     </div>
                   </div>
                   <div className="flex gap-3 mt-4">
@@ -680,7 +685,10 @@ export default function StudioCategoryPage() {
                         {linkedVideo.duration && <span className="text-xs text-gray-400">{formatDuration(linkedVideo.duration)}</span>}
                       </div>
                       <h3 className="font-medium text-gray-900">{linkedVideo.title}</h3>
-                      {linkedVideo.description && <p className="text-sm text-gray-500 mt-1">{linkedVideo.description}</p>}
+                      {linkedVideo.description && (
+                        <div className="text-sm text-gray-500 mt-1 prose-sm [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold"
+                          dangerouslySetInnerHTML={{ __html: linkedVideo.description }} />
+                      )}
                       <p className="text-xs text-gray-400 mt-1.5">by {linkedVideo.recordedBy} · {new Date(linkedVideo.recordedAt).toLocaleDateString()}</p>
                     </div>
                     <button onClick={() => setPreviewVideo(linkedVideo)} className="flex-shrink-0 relative group">
@@ -765,8 +773,7 @@ export default function StudioCategoryPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none" />
+                <RichTextEditor value={editDesc} onChange={setEditDesc} />
               </div>
             </div>
             <div className="flex gap-3 mt-6">

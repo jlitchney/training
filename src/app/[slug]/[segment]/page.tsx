@@ -253,7 +253,10 @@ function VideoCard({ video, slug, color, productName, category }: {
           <h3 className="font-semibold text-gray-900 leading-snug mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
             {video.title}
           </h3>
-          {video.description && <p className="text-sm text-gray-500 line-clamp-2 flex-1">{video.description}</p>}
+          {video.description && (
+              <div className="text-sm text-gray-500 line-clamp-2 flex-1 [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: video.description }} />
+            )}
           {productName && category && (
             <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
               <button
@@ -295,7 +298,8 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
   const query = search.trim().toLowerCase();
   const results = useMemo(() =>
     query ? videos.filter((v) =>
-      v.title.toLowerCase().includes(query) || v.description?.toLowerCase().includes(query)
+      v.title.toLowerCase().includes(query) ||
+      (v.description ?? "").replace(/<[^>]*>/g, " ").toLowerCase().includes(query)
     ) : videos,
     [videos, query]
   );
@@ -463,7 +467,10 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
             )}
           </div>
           <h1 className="text-xl font-bold text-white mb-2">{playing.title}</h1>
-          {playing.description && <p className="text-gray-400 text-sm leading-relaxed mb-4">{playing.description}</p>}
+          {playing.description && (
+            <div className="text-gray-400 text-sm leading-relaxed mb-4 [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-400 [&_a]:underline [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: playing.description }} />
+          )}
           <p className="text-xs text-gray-600">Added {new Date(playing.recordedAt).toLocaleDateString()}</p>
         </div>
 
