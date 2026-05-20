@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   DndContext,
   closestCenter,
@@ -103,7 +104,7 @@ function SortableItem({
           {typeBadge(item.type)}
           <span className="text-sm font-medium text-gray-900 truncate">{item.title}</span>
         </div>
-        {item.prompt && <p className="text-xs text-gray-500 mt-1">{item.prompt}</p>}
+        {item.prompt && <div className="text-xs text-gray-500 mt-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold" dangerouslySetInnerHTML={{ __html: item.prompt }} />}
       </div>
       <button onClick={() => onRemove(item.id)} className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -545,12 +546,10 @@ export default function PlanPage() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                     autoFocus
                   />
-                  <textarea
-                    placeholder="Instructions for the learner (optional)"
+                  <RichTextEditor
                     value={taskPrompt}
-                    onChange={(e) => setTaskPrompt(e.target.value)}
-                    rows={2}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
+                    onChange={setTaskPrompt}
+                    placeholder="Instructions for the learner (optional)"
                   />
                 </div>
                 <div className="flex gap-2 mt-3">
@@ -659,7 +658,7 @@ export default function PlanPage() {
 
                         {item.type === "task" && (
                           <div className="mt-2">
-                            {item.prompt && <p className="text-sm text-gray-600 mb-2">{item.prompt}</p>}
+                            {item.prompt && <div className="text-sm text-gray-600 mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold" dangerouslySetInnerHTML={{ __html: item.prompt }} />}
                             {assignmentId && !done && (
                               <div className="space-y-2">
                                 <textarea
