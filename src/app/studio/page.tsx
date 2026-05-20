@@ -532,15 +532,15 @@ export default function StudioPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-              <Link
-                href="/"
-                className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
-              >
+              <Link href="/" className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">
                 Knowledge Base
               </Link>
               <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm">
                 Recording Studio
               </span>
+              <Link href="/learning" className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">
+                Learning Center
+              </Link>
             </div>
             {user && <UserMenu user={user} />}
           </div>
