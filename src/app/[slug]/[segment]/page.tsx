@@ -9,7 +9,7 @@ import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
+interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; visibility?: "public" | "internal"; categoryVisibility?: Record<string, "public" | "internal">; }
 interface Video { id: string; title: string; description: string; blobUrl: string; duration?: number; recordedAt: string; thumbnailUrl?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string }> = {
@@ -278,6 +278,8 @@ function VideoCard({ video, slug, color, productName, category }: {
 
 // ── Category page ────────────────────────────────────────────────────
 function CategoryView({ slug, category }: { slug: string; category: string }) {
+  const router = useRouter();
+  const { status: authStatus } = useSession();
   const [product, setProduct] = useState<Product | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [search, setSearch] = useState("");
@@ -304,8 +306,19 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
     [videos, query]
   );
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
-  if (!product) return <div className="min-h-screen flex items-center justify-center text-gray-400">Not found.</div>;
+  if (loading || authStatus === "loading") return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+  if (!product) {
+    if (authStatus === "unauthenticated") {
+      router.replace(`/login?callbackUrl=${encodeURIComponent(`/${slug}/${encodeURIComponent(category)}`)}`);
+      return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+    }
+    return <div className="min-h-screen flex items-center justify-center text-gray-400">Not found.</div>;
+  }
+  // Category is explicitly internal — redirect unauthenticated users to login
+  if (authStatus === "unauthenticated" && product.categoryVisibility?.[category] === "internal") {
+    router.replace(`/login?callbackUrl=${encodeURIComponent(`/${slug}/${encodeURIComponent(category)}`)}`);
+    return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+  }
 
   const c = col(product.color);
 
@@ -373,6 +386,7 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
 // ── Video player page ────────────────────────────────────────────────
 function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
   const router = useRouter();
+  const { status: authStatus } = useSession();
   const [product, setProduct] = useState<Product | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -401,13 +415,19 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
     }).catch(() => { setLoading(false); setError(true); });
   }, [slug, videoId]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
-  if (error || !video || !product) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-gray-500">Video not found.</p>
-      <Link href={`/${slug}`} className="text-blue-600 hover:underline text-sm">← Back to {product?.name ?? "product"}</Link>
-    </div>
-  );
+  if (loading || authStatus === "loading") return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+  if (error || !video || !product) {
+    if (authStatus === "unauthenticated") {
+      router.replace(`/login?callbackUrl=${encodeURIComponent(`/${slug}/${videoId}`)}`);
+      return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+    }
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-500">Video not found.</p>
+        <Link href={`/${slug}`} className="text-blue-600 hover:underline text-sm">← Back to {product?.name ?? "product"}</Link>
+      </div>
+    );
+  }
 
   const c = col(product.color);
   const playing = activeVideo ?? video;

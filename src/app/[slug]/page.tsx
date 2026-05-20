@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
@@ -39,6 +40,8 @@ function blobSrc(url: string) {
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
+  const { status: authStatus } = useSession();
   const [product, setProduct] = useState<Product | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [catMap, setCatMap] = useState<Record<string, string>>({});
@@ -91,13 +94,19 @@ export default function ProductPage() {
     return map;
   }, [videos, catMap]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
-  if (!product) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-gray-500">Product not found.</p>
-      <Link href="/" className="text-blue-600 hover:underline text-sm">← Back to home</Link>
-    </div>
-  );
+  if (loading || authStatus === "loading") return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+  if (!product) {
+    if (authStatus === "unauthenticated") {
+      router.replace(`/login?callbackUrl=${encodeURIComponent(`/${slug}`)}`);
+      return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
+    }
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-500">Product not found.</p>
+        <Link href="/" className="text-blue-600 hover:underline text-sm">← Back to home</Link>
+      </div>
+    );
+  }
 
   const c = col(product.color);
 

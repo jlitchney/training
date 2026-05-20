@@ -435,3 +435,21 @@ export async function linkChecklistVideo(
   );
   await saveChecklist(productId, updated);
 }
+
+// ── Blob URL reverse lookup ──────────────────────────────────────────
+// Used by the blob proxy to check internal content visibility without
+// knowing the productId upfront.
+export async function getVideoByBlobUrl(
+  url: string,
+): Promise<{ video: Video; product: Product; category?: string } | null> {
+  const products = await getProducts();
+  for (const product of products) {
+    const checklist = await getChecklist(product.slug);
+    for (const item of checklist) {
+      if (item.video && (item.video.blobUrl === url || item.video.thumbnailUrl === url)) {
+        return { video: item.video, product, category: item.category };
+      }
+    }
+  }
+  return null;
+}

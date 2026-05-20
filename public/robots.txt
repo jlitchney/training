@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /studio/
+Disallow: /admin/
+Disallow: /login
+Allow: /

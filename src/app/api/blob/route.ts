@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { getVideoByBlobUrl } from "@/lib/kv";
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
@@ -6,6 +8,21 @@ export async function GET(req: NextRequest) {
 
   if (!url.includes(".blob.vercel-storage.com")) {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
+  }
+
+  const session = await getSession();
+  if (!session) {
+    const result = await getVideoByBlobUrl(url);
+    if (result) {
+      const { video, product, category } = result;
+      const isInternal =
+        video.visibility === "internal" ||
+        product.visibility === "internal" ||
+        (category !== undefined && product.categoryVisibility?.[category] === "internal");
+      if (isInternal) {
+        return new NextResponse(null, { status: 401 });
+      }
+    }
   }
 
   const token = process.env.BLOB_READ_WRITE_TOKEN;
