@@ -233,7 +233,7 @@ export default function StudioProductPage() {
                 <Link
                   key={cat}
                   href={`/studio/${slug}/${encodeURIComponent(cat)}`}
-                  className="relative bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all group flex items-center gap-4"
+                  className="relative bg-white rounded-2xl border border-gray-200 px-5 pb-5 pt-8 hover:shadow-md hover:border-gray-300 transition-all group flex items-center gap-4"
                 >
                   {/* visibility toggle — upper right corner */}
                   <div className="absolute top-3.5 right-3.5">
@@ -280,9 +280,7 @@ export default function StudioProductPage() {
                       {covered}/{total} covered{pct > 0 && !complete ? ` · ${pct}%` : ""}
                     </p>
                   </div>
-                  <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+
                 </Link>
               );
             })}
