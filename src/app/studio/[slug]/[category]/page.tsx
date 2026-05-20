@@ -61,6 +61,35 @@ function formatDuration(seconds?: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function captureThumbnailFromBlob(videoBlob: Blob): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(videoBlob);
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = url;
+    const cleanup = () => URL.revokeObjectURL(url);
+    const timer = setTimeout(() => { cleanup(); resolve(null); }, 8000);
+    video.addEventListener("loadedmetadata", () => {
+      video.currentTime = Math.min(2, video.duration * 0.1);
+    });
+    video.addEventListener("seeked", () => {
+      clearTimeout(timer);
+      const w = Math.min(video.videoWidth || 640, 640);
+      const h = video.videoWidth > 0 ? Math.round(w * video.videoHeight / video.videoWidth) : 360;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { cleanup(); resolve(null); return; }
+      ctx.drawImage(video, 0, 0, w, h);
+      canvas.toBlob((blob) => { cleanup(); resolve(blob); }, "image/jpeg", 0.8);
+    });
+    video.addEventListener("error", () => { clearTimeout(timer); cleanup(); resolve(null); });
+  });
+}
+
 export default function StudioCategoryPage() {
   const { slug, category } = useParams<{ slug: string; category: string }>();
   const decodedCategory = decodeURIComponent(category);
@@ -86,6 +115,7 @@ export default function StudioCategoryPage() {
   const transcriptRef = useRef("");
 
   const [pendingBlobUrl, setPendingBlobUrl] = useState("");
+  const [pendingThumbnailUrl, setPendingThumbnailUrl] = useState<string | undefined>();
   const [pendingDuration, setPendingDuration] = useState<number | undefined>();
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState("");
@@ -163,7 +193,7 @@ export default function StudioCategoryPage() {
   function selectItem(id: string) {
     if (pendingBlobUrl && !confirm("You have an unsaved recording. Discard it and switch items?")) return;
     setSelectedItemId(id);
-    setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc(""); setUploadError("");
+    setPendingBlobUrl(""); setPendingThumbnailUrl(undefined); setFormTitle(""); setFormCategory(""); setFormDesc(""); setUploadError("");
   }
 
   function handleBreadcrumbNav(e: React.MouseEvent<HTMLAnchorElement>) {
@@ -246,10 +276,20 @@ export default function StudioCategoryPage() {
         setUploading(true);
         try {
           const videoBlob = new Blob(chunksRef.current, { type: "video/webm" });
-          const result = await uploadBlob(videoBlob, `recording-${Date.now()}.webm`);
+          const ts = Date.now();
+          const [thumbBlob, result] = await Promise.all([
+            captureThumbnailFromBlob(videoBlob),
+            uploadBlob(videoBlob, `recording-${ts}.webm`),
+          ]);
           if (result) {
+            let thumbUrl: string | undefined;
+            if (thumbBlob) {
+              const thumbResult = await uploadBlob(thumbBlob, `thumb-${ts}.jpg`);
+              thumbUrl = thumbResult?.url;
+            }
             const item = selectedItemRef.current;
             setPendingBlobUrl(result.url);
+            setPendingThumbnailUrl(thumbUrl);
             setPendingDuration(duration);
             setFormTitle(item?.title ?? "");
             setFormCategory(item?.category ?? decodedCategory);
@@ -295,7 +335,7 @@ export default function StudioCategoryPage() {
       const res = await fetch("/api/videos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: slug, title: formTitle, description: formDesc, blobUrl: pendingBlobUrl, duration: pendingDuration }),
+        body: JSON.stringify({ productId: slug, title: formTitle, description: formDesc, blobUrl: pendingBlobUrl, duration: pendingDuration, thumbnailUrl: pendingThumbnailUrl }),
       });
       if (!res.ok) return;
       const video: Video = await res.json();
@@ -324,7 +364,7 @@ export default function StudioCategoryPage() {
         cacheVideo(video);
       }
 
-      setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc("");
+      setPendingBlobUrl(""); setPendingThumbnailUrl(undefined); setFormTitle(""); setFormCategory(""); setFormDesc("");
     } finally {
       setSaving(false);
     }

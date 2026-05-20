@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
-interface Video { id: string; title: string; description: string; duration?: number; blobUrl?: string; }
+interface Video { id: string; title: string; description: string; duration?: number; blobUrl?: string; thumbnailUrl?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string; border: string }> = {
   blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
@@ -161,8 +161,12 @@ export default function ProductPage() {
                   href={`/${slug}/${v.id}`}
                   className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all group"
                 >
-                  <div className={`w-10 h-10 rounded-lg ${c.light} flex-shrink-0 flex items-center justify-center`}>
-                    <span className={`text-xs ${c.text}`}>▶</span>
+                  <div className={`w-10 h-10 rounded-lg ${c.light} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
+                    {v.thumbnailUrl ? (
+                      <img src={blobSrc(v.thumbnailUrl)} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <span className={`text-xs ${c.text}`}>▶</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">{v.title}</p>

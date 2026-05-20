@@ -24,6 +24,7 @@ export interface Video {
   duration?: number; // seconds
   tags?: string[];
   visibility?: 'public' | 'internal';
+  thumbnailUrl?: string;
 }
 
 export interface ChecklistItem {

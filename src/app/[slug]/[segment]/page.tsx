@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { renderIcon, renderIconColored } from "@/lib/renderIcon";
@@ -8,7 +8,7 @@ import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
-interface Video { id: string; title: string; description: string; blobUrl: string; duration?: number; recordedAt: string; }
+interface Video { id: string; title: string; description: string; blobUrl: string; duration?: number; recordedAt: string; thumbnailUrl?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string }> = {
   blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    text: "text-blue-700" },
@@ -38,6 +38,60 @@ function formatDuration(s?: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
+
+// ── Video thumbnail ──────────────────────────────────────────────────
+function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration }: {
+  blobUrl: string; thumbnailUrl?: string; color: string; duration?: number;
+}) {
+  const c = col(color);
+  const [frame, setFrame] = useState<string | null>(thumbnailUrl ? blobSrc(thumbnailUrl) : null);
+  const attempted = useRef(false);
+
+  useEffect(() => {
+    if (frame || attempted.current) return;
+    // Only attempt canvas capture on pointer devices (not mobile touch-only)
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    attempted.current = true;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = blobSrc(blobUrl);
+    const timer = setTimeout(() => { video.src = ""; }, 8000);
+    video.addEventListener("loadedmetadata", () => {
+      video.currentTime = Math.min(2, video.duration * 0.1);
+    });
+    video.addEventListener("seeked", () => {
+      clearTimeout(timer);
+      const w = Math.min(video.videoWidth || 320, 640);
+      const h = video.videoWidth > 0 ? Math.round(w * video.videoHeight / video.videoWidth) : 180;
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) { ctx.drawImage(video, 0, 0, w, h); setFrame(canvas.toDataURL("image/jpeg", 0.8)); }
+      video.src = "";
+    });
+    video.addEventListener("error", () => { clearTimeout(timer); });
+  }, [blobUrl, frame]);
+
+  return (
+    <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
+      {frame ? (
+        <img src={frame} className="w-full h-full object-cover" alt="" />
+      ) : (
+        <div className="w-12 h-12 rounded-full bg-white/80 group-hover:bg-white/95 group-hover:scale-105 transition-all flex items-center justify-center shadow-md">
+          <span className={`text-base pl-0.5 ${c.text}`}>▶</span>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {duration && (
+        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+          {formatDuration(duration)}
+        </span>
+      )}
+    </div>
+  );
+}
 
 // ── Share modal ──────────────────────────────────────────────────────
 function ShareModal({ video, slug, category, productName, onClose }: {
@@ -171,16 +225,7 @@ function VideoCard({ video, slug, color, productName, category }: {
         href={`/${slug}/${video.id}`}
         className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all flex flex-col"
       >
-        <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
-          <div className="w-12 h-12 rounded-full bg-white/80 group-hover:bg-white/95 group-hover:scale-105 transition-all flex items-center justify-center shadow-md">
-            <span className={`text-base pl-0.5 ${c.text}`}>▶</span>
-          </div>
-          {video.duration && (
-            <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
-              {formatDuration(video.duration)}
-            </span>
-          )}
-        </div>
+        <VideoThumbnail blobUrl={video.blobUrl} thumbnailUrl={video.thumbnailUrl} color={color} duration={video.duration} />
         <div className="p-4 flex-1 flex flex-col">
           <h3 className="font-semibold text-gray-900 leading-snug mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
             {video.title}

@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     recordedBy: session.name,
     duration: body.duration,
     tags: body.tags ?? [],
+    thumbnailUrl: body.thumbnailUrl,
   });
   return NextResponse.json(video, { status: 201 });
 }
