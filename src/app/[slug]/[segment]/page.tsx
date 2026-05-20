@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { upload } from "@vercel/blob/client";
 import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,16 +42,16 @@ function formatDuration(s?: number) {
 
 
 // ── Video thumbnail ──────────────────────────────────────────────────
-function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration }: {
-  blobUrl: string; thumbnailUrl?: string; color: string; duration?: number;
+function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration, videoId, slug }: {
+  blobUrl: string; thumbnailUrl?: string; color: string; duration?: number; videoId: string; slug: string;
 }) {
   const c = col(color);
+  const { data: session } = useSession();
   const [frame, setFrame] = useState<string | null>(thumbnailUrl ? blobSrc(thumbnailUrl) : null);
   const attempted = useRef(false);
 
   useEffect(() => {
     if (frame || attempted.current) return;
-    // Only attempt canvas capture on pointer devices (not mobile touch-only)
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     attempted.current = true;
     const video = document.createElement("video");
@@ -59,7 +61,8 @@ function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration }: {
     video.src = blobSrc(blobUrl);
     const timer = setTimeout(() => { video.src = ""; }, 8000);
     video.addEventListener("loadedmetadata", () => {
-      video.currentTime = Math.min(2, video.duration * 0.1);
+      const seekTo = isFinite(video.duration) ? Math.min(2, video.duration * 0.1) : 0.1;
+      video.currentTime = seekTo || 0.1;
     });
     video.addEventListener("seeked", () => {
       clearTimeout(timer);
@@ -68,11 +71,27 @@ function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration }: {
       const canvas = document.createElement("canvas");
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (ctx) { ctx.drawImage(video, 0, 0, w, h); setFrame(canvas.toDataURL("image/jpeg", 0.8)); }
+      if (!ctx) { video.src = ""; return; }
+      ctx.drawImage(video, 0, 0, w, h);
+      setFrame(canvas.toDataURL("image/jpeg", 0.8));
       video.src = "";
+      // Persist for mobile: save to DB if no stored thumbnail and user is authenticated
+      if (!thumbnailUrl && session) {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          try {
+            const result = await upload(`thumb-${videoId}-${Date.now()}.jpg`, blob, { access: "private", handleUploadUrl: "/api/upload" });
+            await fetch(`/api/videos/${videoId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ productId: slug, thumbnailUrl: result.url }),
+            });
+          } catch { /* ignore */ }
+        }, "image/jpeg", 0.8);
+      }
     });
     video.addEventListener("error", () => { clearTimeout(timer); });
-  }, [blobUrl, frame]);
+  }, [blobUrl, frame, thumbnailUrl, session, videoId, slug]);
 
   return (
     <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
@@ -225,7 +244,7 @@ function VideoCard({ video, slug, color, productName, category }: {
         href={`/${slug}/${video.id}`}
         className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all flex flex-col"
       >
-        <VideoThumbnail blobUrl={video.blobUrl} thumbnailUrl={video.thumbnailUrl} color={color} duration={video.duration} />
+        <VideoThumbnail blobUrl={video.blobUrl} thumbnailUrl={video.thumbnailUrl} color={color} duration={video.duration} videoId={video.id} slug={slug} />
         <div className="p-4 flex-1 flex flex-col">
           <h3 className="font-semibold text-gray-900 leading-snug mb-1.5 group-hover:text-blue-600 transition-colors line-clamp-2">
             {video.title}
