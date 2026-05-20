@@ -10,6 +10,13 @@ export interface Product {
   order: number;
   visibility?: 'public' | 'internal';
   categoryVisibility?: Record<string, 'public' | 'internal'>;
+  folderId?: string;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  order: number;
 }
 
 export interface Video {
@@ -39,6 +46,7 @@ export interface ChecklistItem {
 }
 
 const PRODUCTS_KEY = "training:products:v1";
+const FOLDERS_KEY = "training:folders:v1";
 const hasKV = () =>
   !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
@@ -46,6 +54,7 @@ const hasKV = () =>
 let memProducts: Product[] = [];
 let memVideos: Record<string, Video[]> = {};
 let memChecklist: Record<string, ChecklistItem[]> = {};
+let memFolders: Folder[] = [];
 
 // ── Default seed data ───────────────────────────────────────────────
 const DEFAULT_PRODUCTS: Product[] = [
@@ -139,6 +148,50 @@ export async function updateProduct(slug: string, patch: Partial<Product>): Prom
 export async function deleteProduct(slug: string): Promise<void> {
   const products = await getProducts();
   await saveProducts(products.filter((p) => p.slug !== slug));
+}
+
+// ── Folders ──────────────────────────────────────────────────────────
+export async function getFolders(): Promise<Folder[]> {
+  if (!hasKV()) return [...memFolders].sort((a, b) => a.order - b.order);
+  try {
+    const db = await kv();
+    const folders = await db.get<Folder[]>(FOLDERS_KEY);
+    return [...(folders ?? [])].sort((a, b) => a.order - b.order);
+  } catch { return []; }
+}
+
+export async function saveFolders(folders: Folder[]): Promise<void> {
+  if (!hasKV()) { memFolders = folders; return; }
+  const db = await kv();
+  await db.set(FOLDERS_KEY, folders);
+}
+
+export async function createFolder(name: string): Promise<Folder> {
+  const folders = await getFolders();
+  const folder: Folder = { id: uuidv4(), name: name.trim(), order: folders.length + 1 };
+  await saveFolders([...folders, folder]);
+  return folder;
+}
+
+export async function updateFolder(id: string, patch: Partial<Folder>): Promise<Folder | null> {
+  const folders = await getFolders();
+  const idx = folders.findIndex((f) => f.id === id);
+  if (idx === -1) return null;
+  const updated = { ...folders[idx], ...patch };
+  folders[idx] = updated;
+  await saveFolders(folders);
+  return updated;
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+  const folders = await getFolders();
+  await saveFolders(folders.filter((f) => f.id !== id));
+  // Unset folderId on any products in this folder
+  const products = await getProducts();
+  const dirty = products.filter((p) => p.folderId === id);
+  if (dirty.length > 0) {
+    await saveProducts(products.map((p) => p.folderId === id ? { ...p, folderId: undefined } : p));
+  }
 }
 
 // ── Videos ──────────────────────────────────────────────────────────
