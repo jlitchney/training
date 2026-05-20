@@ -132,6 +132,9 @@ export default function StudioCategoryPage() {
   const [addTitle, setAddTitle] = useState("");
   const [addSaving, setAddSaving] = useState(false);
 
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemTitle, setEditingItemTitle] = useState("");
+
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -269,6 +272,39 @@ export default function StudioCategoryPage() {
     } finally {
       setAddSaving(false);
     }
+  }
+
+  async function handleRenameItem(itemId: string) {
+    const newTitle = editingItemTitle.trim();
+    setEditingItemId(null);
+    if (!newTitle) return;
+    const item = checklist.find((i) => i.id === itemId);
+    if (!item || newTitle === item.title) return;
+    fetch("/api/checklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "update", productId: slug, itemId, title: newTitle }),
+    });
+    setChecklist((prev) => prev.map((i) => i.id === itemId ? { ...i, title: newTitle } : i));
+  }
+
+  async function handleDeleteItem(item: ChecklistItem) {
+    const msg = item.videoId
+      ? `Delete "${item.title}"? The linked video will also be deleted.`
+      : `Delete "${item.title}"?`;
+    if (!confirm(msg)) return;
+    if (item.videoId) {
+      fetch(`/api/videos/${item.videoId}?productId=${slug}`, { method: "DELETE" });
+      uncacheVideo(item.videoId);
+      setVideos((prev) => prev.filter((v) => v.id !== item.videoId));
+    }
+    fetch("/api/checklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "delete", productId: slug, itemId: item.id }),
+    });
+    setChecklist((prev) => prev.filter((i) => i.id !== item.id));
+    if (selectedItemId === item.id) setSelectedItemId(null);
   }
 
   async function uploadBlob(blob: Blob, filename: string): Promise<{ url: string } | null> {
@@ -564,22 +600,62 @@ export default function StudioCategoryPage() {
                 const isPublished = isDone && item.video?.published === true;
                 const isDraft = isDone && !isPublished;
                 const icon = isPublished ? "✅" : isDraft ? "🟡" : "⬜";
+                const isEditing = editingItemId === item.id;
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => selectItem(item.id)}
-                    className={`w-full text-left flex items-start gap-2.5 px-4 py-2.5 text-sm border-b border-gray-50 transition-colors ${
-                      isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
-                    {isDone && item.video?.visibility === "internal" && (
-                      <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
+                  <div key={item.id} className="relative group/item border-b border-gray-50">
+                    {isEditing ? (
+                      <div className="px-3 py-2">
+                        <input
+                          autoFocus
+                          value={editingItemTitle}
+                          onChange={(e) => setEditingItemTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleRenameItem(item.id);
+                            if (e.key === "Escape") setEditingItemId(null);
+                          }}
+                          onBlur={() => handleRenameItem(item.id)}
+                          className="w-full text-sm border border-blue-400 rounded px-2 py-1 focus:outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => selectItem(item.id)}
+                          className={`w-full text-left flex items-start gap-2.5 px-4 py-2.5 text-sm pr-14 transition-colors ${
+                            isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
+                          {isDone && item.video?.visibility === "internal" && (
+                            <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                          )}
+                          <span className="leading-snug">{item.title}</span>
+                        </button>
+                        <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditingItemTitle(item.title); }}
+                            className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
+                            title="Rename"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item); }}
+                            className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-red-300 hover:bg-white/20" : "text-gray-400 hover:text-red-600 hover:bg-red-50"}`}
+                            title="Delete"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </>
                     )}
-                    <span className="leading-snug">{item.title}</span>
-                  </button>
+                  </div>
                 );
               })
             )}
