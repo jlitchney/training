@@ -48,12 +48,15 @@ function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration, videoId, slug 
   const c = col(color);
   const { data: session } = useSession();
   const [frame, setFrame] = useState<string | null>(thumbnailUrl ? blobSrc(thumbnailUrl) : null);
-  const attempted = useRef(false);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const captureStarted = useRef(false);
+  const saveStarted = useRef(false);
 
+  // Effect 1: capture frame via Canvas on desktop
   useEffect(() => {
-    if (frame || attempted.current) return;
+    if (frame || captureStarted.current) return;
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    attempted.current = true;
+    captureStarted.current = true;
     const video = document.createElement("video");
     video.muted = true;
     video.playsInline = true;
@@ -74,24 +77,25 @@ function VideoThumbnail({ blobUrl, thumbnailUrl, color, duration, videoId, slug 
       if (!ctx) { video.src = ""; return; }
       ctx.drawImage(video, 0, 0, w, h);
       setFrame(canvas.toDataURL("image/jpeg", 0.8));
+      canvas.toBlob((blob) => { if (blob) setCapturedBlob(blob); }, "image/jpeg", 0.8);
       video.src = "";
-      // Persist for mobile: save to DB if no stored thumbnail and user is authenticated
-      if (!thumbnailUrl && session) {
-        canvas.toBlob(async (blob) => {
-          if (!blob) return;
-          try {
-            const result = await upload(`thumb-${videoId}-${Date.now()}.jpg`, blob, { access: "private", handleUploadUrl: "/api/upload" });
-            await fetch(`/api/videos/${videoId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ productId: slug, thumbnailUrl: result.url }),
-            });
-          } catch { /* ignore */ }
-        }, "image/jpeg", 0.8);
-      }
     });
     video.addEventListener("error", () => { clearTimeout(timer); });
-  }, [blobUrl, frame, thumbnailUrl, session, videoId, slug]);
+  }, [blobUrl, frame]);
+
+  // Effect 2: persist captured blob to DB once session is available
+  // Runs independently so session loading after capture still triggers save
+  useEffect(() => {
+    if (!capturedBlob || thumbnailUrl || !session || saveStarted.current) return;
+    saveStarted.current = true;
+    upload(`thumb-${videoId}-${Date.now()}.jpg`, capturedBlob, { access: "private", handleUploadUrl: "/api/upload" })
+      .then((result) => fetch(`/api/videos/${videoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: slug, thumbnailUrl: result.url }),
+      }))
+      .catch(() => {});
+  }, [capturedBlob, thumbnailUrl, session, videoId, slug]);
 
   return (
     <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
