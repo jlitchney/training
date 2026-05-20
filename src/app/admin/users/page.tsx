@@ -8,7 +8,7 @@ import { UserMenu } from "@/components/UserMenu";
 interface AppUser {
   email: string;
   name: string;
-  role: "admin" | "staff";
+  role: "admin" | "manager" | "staff";
   active: boolean;
   createdAt: string;
 }
@@ -25,14 +25,14 @@ export default function AdminUsersPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<"admin" | "staff">("staff");
+  const [newRole, setNewRole] = useState<"admin" | "manager" | "staff">("staff");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
 
   // Edit modal
   const [editUser, setEditUser] = useState<AppUser | null>(null);
   const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "staff">("staff");
+  const [editRole, setEditRole] = useState<"admin" | "manager" | "staff">("staff");
   const [editActive, setEditActive] = useState(true);
   const [changePassword, setChangePassword] = useState(false);
   const [editPassword, setEditPassword] = useState("");
@@ -145,7 +145,7 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
                   <td className="px-4 py-3 text-gray-500">{user.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${user.role === "admin" ? "bg-purple-100 text-purple-700" : user.role === "manager" ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700"}`}>
                       {user.role}
                     </span>
                   </td>
@@ -156,7 +156,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => { setEditUser(user); setEditName(user.name); setEditRole(user.role); setEditActive(user.active); setChangePassword(false); setEditPassword(""); }}
+                      onClick={() => { setEditUser(user); setEditName(user.name); setEditRole(user.role as "admin" | "manager" | "staff"); setEditActive(user.active); setChangePassword(false); setEditPassword(""); }}
                       className="text-xs text-gray-500 hover:text-gray-900 mr-3"
                     >
                       Edit
@@ -186,9 +186,10 @@ export default function AdminUsersPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
               <input type="password" placeholder="Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              <select value={newRole} onChange={(e) => setNewRole(e.target.value as "admin" | "staff")}
+              <select value={newRole} onChange={(e) => setNewRole(e.target.value as "admin" | "manager" | "staff")}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
                 <option value="staff">Staff</option>
+                <option value="manager">Manager</option>
                 <option value="admin">Admin</option>
               </select>
               {addError && <p className="text-sm text-red-600">{addError}</p>}
@@ -215,9 +216,10 @@ export default function AdminUsersPage() {
             <div className="space-y-3">
               <input type="text" placeholder="Full name" value={editName} onChange={(e) => setEditName(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              <select value={editRole} onChange={(e) => setEditRole(e.target.value as "admin" | "staff")}
+              <select value={editRole} onChange={(e) => setEditRole(e.target.value as "admin" | "manager" | "staff")}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
                 <option value="staff">Staff</option>
+                <option value="manager">Manager</option>
                 <option value="admin">Admin</option>
               </select>
               <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">

@@ -440,6 +440,118 @@ export async function linkChecklistVideo(
   await saveChecklist(productId, updated);
 }
 
+// ── Training Plans ───────────────────────────────────────────────────
+export interface TrainingPlanItem {
+  id: string;
+  type: "video" | "article" | "task";
+  productId?: string;
+  contentId?: string;
+  title: string;
+  description?: string;
+  prompt?: string;
+  order: number;
+}
+
+export interface TrainingPlan {
+  id: string;
+  title: string;
+  description?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  items: TrainingPlanItem[];
+}
+
+export interface PlanAssignment {
+  id: string;
+  planId: string;
+  planTitle: string;
+  userId: string;
+  userName: string;
+  assignedBy: string;
+  assignedAt: string;
+  dueDate?: string;
+}
+
+export interface ItemProgress {
+  completed: boolean;
+  completedAt?: string;
+  response?: string;
+}
+
+const TRAINING_PLANS_KEY = "training:plans";
+const TRAINING_ASSIGNMENTS_KEY = "training:assignments";
+function progressKey(assignmentId: string) { return `training:progress:${assignmentId}`; }
+
+let memTrainingPlans: TrainingPlan[] = [];
+let memTrainingAssignments: PlanAssignment[] = [];
+let memTrainingProgress: Record<string, Record<string, ItemProgress>> = {};
+
+export async function getTrainingPlans(): Promise<TrainingPlan[]> {
+  if (!hasKV()) return [...memTrainingPlans];
+  try {
+    const db = await kv();
+    return (await db.get<TrainingPlan[]>(TRAINING_PLANS_KEY)) ?? [];
+  } catch { return []; }
+}
+
+export async function saveTrainingPlans(plans: TrainingPlan[]): Promise<void> {
+  if (!hasKV()) { memTrainingPlans = plans; return; }
+  const db = await kv();
+  await db.set(TRAINING_PLANS_KEY, plans);
+}
+
+export async function createTrainingPlan(data: Omit<TrainingPlan, "id" | "createdAt" | "updatedAt">): Promise<TrainingPlan> {
+  const plans = await getTrainingPlans();
+  const now = new Date().toISOString();
+  const plan: TrainingPlan = { ...data, id: uuidv4(), createdAt: now, updatedAt: now };
+  await saveTrainingPlans([...plans, plan]);
+  return plan;
+}
+
+export async function updateTrainingPlan(id: string, patch: Partial<Omit<TrainingPlan, "id" | "createdAt">>): Promise<TrainingPlan | null> {
+  const plans = await getTrainingPlans();
+  const idx = plans.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  const updated = { ...plans[idx], ...patch, updatedAt: new Date().toISOString() };
+  plans[idx] = updated;
+  await saveTrainingPlans(plans);
+  return updated;
+}
+
+export async function deleteTrainingPlan(id: string): Promise<void> {
+  const plans = await getTrainingPlans();
+  await saveTrainingPlans(plans.filter((p) => p.id !== id));
+}
+
+export async function getAssignments(): Promise<PlanAssignment[]> {
+  if (!hasKV()) return [...memTrainingAssignments];
+  try {
+    const db = await kv();
+    return (await db.get<PlanAssignment[]>(TRAINING_ASSIGNMENTS_KEY)) ?? [];
+  } catch { return []; }
+}
+
+export async function saveAssignments(assignments: PlanAssignment[]): Promise<void> {
+  if (!hasKV()) { memTrainingAssignments = assignments; return; }
+  const db = await kv();
+  await db.set(TRAINING_ASSIGNMENTS_KEY, assignments);
+}
+
+export async function getPlanProgress(assignmentId: string): Promise<Record<string, ItemProgress>> {
+  if (!hasKV()) return memTrainingProgress[assignmentId] ?? {};
+  try {
+    const db = await kv();
+    return (await db.get<Record<string, ItemProgress>>(progressKey(assignmentId))) ?? {};
+  } catch { return {}; }
+}
+
+export async function savePlanProgress(assignmentId: string, progress: Record<string, ItemProgress>): Promise<void> {
+  if (!hasKV()) { memTrainingProgress[assignmentId] = progress; return; }
+  const db = await kv();
+  await db.set(progressKey(assignmentId), progress);
+}
+
 // ── Blob URL reverse lookup ──────────────────────────────────────────
 // Used by the blob proxy to check internal content visibility without
 // knowing the productId upfront.

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth-options";
 
-export type UserRole = "admin" | "staff" | "viewer";
+export type UserRole = "admin" | "manager" | "staff" | "viewer";
 
 export interface SessionUser {
   email: string;
