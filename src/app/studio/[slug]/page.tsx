@@ -233,37 +233,39 @@ export default function StudioProductPage() {
                 <Link
                   key={cat}
                   href={`/studio/${slug}/${encodeURIComponent(cat)}`}
-                  className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all group flex items-center gap-4"
+                  className="relative bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all group flex items-center gap-4"
                 >
+                  {/* visibility toggle — upper right corner */}
+                  <div className="absolute top-3.5 right-3.5">
+                    {product?.visibility === "internal" ? (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-600" title="Restricted by product visibility">
+                        🔒 via product
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCategoryVisibility(cat); }}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                          (product?.categoryVisibility?.[cat] ?? "public") === "internal"
+                            ? "bg-amber-50 border-amber-200 text-amber-600"
+                            : "border-gray-200 text-gray-400 hover:border-gray-300"
+                        }`}
+                      >
+                        {(product?.categoryVisibility?.[cat] ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                      </button>
+                    )}
+                  </div>
+
                   <div className={`w-11 h-11 rounded-xl ${c.iconBg} flex items-center justify-center flex-shrink-0`}>
                     <svg className={`w-5 h-5 ${c.iconText}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-20">
                     <div className="flex items-center gap-2 mb-1.5">
                       <h2 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight">{cat}</h2>
                       {complete && <span className="text-sm flex-shrink-0">✅</span>}
-                    </div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      {product?.visibility === "internal" ? (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 border-amber-200 text-amber-600" title="Restricted by product visibility">
-                          🔒 via product
-                        </span>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCategoryVisibility(cat); }}
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                            (product?.categoryVisibility?.[cat] ?? "public") === "internal"
-                              ? "bg-amber-50 border-amber-200 text-amber-600"
-                              : "border-gray-200 text-gray-400 hover:border-gray-300"
-                          }`}
-                        >
-                          {(product?.categoryVisibility?.[cat] ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
-                        </button>
-                      )}
                       {drafts > 0 && (
-                        <span className="text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5">
+                        <span className="text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5 flex-shrink-0">
                           {drafts} draft
                         </span>
                       )}
