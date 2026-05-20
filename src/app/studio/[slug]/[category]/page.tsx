@@ -6,6 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { UserMenu } from "@/components/UserMenu";
 import { RichTextEditor, stripHtml } from "@/components/RichTextEditor";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; }
@@ -117,6 +122,96 @@ function captureFrameFromUrl(url: string): Promise<Blob | null> {
   });
 }
 
+const GripIcon = () => (
+  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+    <circle cx="5.5" cy="3.5" r="1.1"/><circle cx="10.5" cy="3.5" r="1.1"/>
+    <circle cx="5.5" cy="8"   r="1.1"/><circle cx="10.5" cy="8"   r="1.1"/>
+    <circle cx="5.5" cy="12.5" r="1.1"/><circle cx="10.5" cy="12.5" r="1.1"/>
+  </svg>
+);
+
+function SortableSidebarItem({
+  item, isSelected, isEditing, editTitle, colorBg,
+  onSelect, onStartEdit, onFinishEdit, onEditChange, onDelete,
+}: {
+  item: ChecklistItem; isSelected: boolean; isEditing: boolean; editTitle: string; colorBg: string;
+  onSelect: () => void; onStartEdit: () => void; onFinishEdit: () => void;
+  onEditChange: (v: string) => void; onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const isDone = !!item.videoId;
+  const isPublished = isDone && item.video?.published === true;
+  const isDraft = isDone && !isPublished;
+  const icon = isPublished ? "✅" : isDraft ? "🟡" : "⬜";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative group/item border-b border-gray-50 ${isDragging ? "opacity-50 z-50 shadow-lg" : ""}`}
+    >
+      {isEditing ? (
+        <div className="px-3 py-2">
+          <input
+            autoFocus
+            value={editTitle}
+            onChange={(e) => onEditChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onFinishEdit(); if (e.key === "Escape") onFinishEdit(); }}
+            onBlur={onFinishEdit}
+            className="w-full text-sm border border-blue-400 rounded px-2 py-1 focus:outline-none"
+          />
+        </div>
+      ) : (
+        <>
+          {/* Grip handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className={`absolute left-1 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/item:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none ${isSelected ? "text-white/50 hover:text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+            title="Drag to reorder"
+          >
+            <GripIcon />
+          </div>
+          <button
+            onClick={onSelect}
+            className={`w-full text-left flex items-start gap-2.5 pl-7 pr-14 py-2.5 text-sm transition-colors ${
+              isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
+            {isDone && item.video?.visibility === "internal" && (
+              <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            )}
+            <span className="leading-snug">{item.title}</span>
+          </button>
+          <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity`}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+              className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
+              title="Rename"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-red-300 hover:bg-white/20" : "text-gray-400 hover:text-red-600 hover:bg-red-50"}`}
+              title="Delete"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function StudioCategoryPage() {
   const { slug, category } = useParams<{ slug: string; category: string }>();
   const decodedCategory = decodeURIComponent(category);
@@ -134,6 +229,8 @@ export default function StudioCategoryPage() {
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemTitle, setEditingItemTitle] = useState("");
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -305,6 +402,31 @@ export default function StudioCategoryPage() {
     });
     setChecklist((prev) => prev.filter((i) => i.id !== item.id));
     if (selectedItemId === item.id) setSelectedItemId(null);
+  }
+
+  function handleSidebarDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const aId = String(active.id);
+    const oId = String(over.id);
+    setChecklist((prev) => {
+      const catIds = prev
+        .filter((i) => (i.category?.trim() || "Uncategorized") === decodedCategory)
+        .map((i) => i.id);
+      const oi = catIds.indexOf(aId);
+      const ni = catIds.indexOf(oId);
+      if (oi === -1 || ni === -1) return prev;
+      const reordered = arrayMove(catIds, oi, ni);
+      const positions = catIds.map((id) => prev.findIndex((i) => i.id === id));
+      const full = [...prev];
+      reordered.forEach((id, i) => { full[positions[i]] = prev.find((item) => item.id === id)!; });
+      fetch("/api/checklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "reorder", productId: slug, items: full }),
+      });
+      return full;
+    });
   }
 
   async function uploadBlob(blob: Blob, filename: string): Promise<{ url: string } | null> {
@@ -594,70 +716,25 @@ export default function StudioCategoryPage() {
                 </button>
               </div>
             ) : (
-              categoryItems.map((item) => {
-                const isSelected = item.id === selectedItemId;
-                const isDone = !!item.videoId;
-                const isPublished = isDone && item.video?.published === true;
-                const isDraft = isDone && !isPublished;
-                const icon = isPublished ? "✅" : isDraft ? "🟡" : "⬜";
-                const isEditing = editingItemId === item.id;
-                return (
-                  <div key={item.id} className="relative group/item border-b border-gray-50">
-                    {isEditing ? (
-                      <div className="px-3 py-2">
-                        <input
-                          autoFocus
-                          value={editingItemTitle}
-                          onChange={(e) => setEditingItemTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleRenameItem(item.id);
-                            if (e.key === "Escape") setEditingItemId(null);
-                          }}
-                          onBlur={() => handleRenameItem(item.id)}
-                          className="w-full text-sm border border-blue-400 rounded px-2 py-1 focus:outline-none"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => selectItem(item.id)}
-                          className={`w-full text-left flex items-start gap-2.5 px-4 py-2.5 text-sm pr-14 transition-colors ${
-                            isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
-                          {isDone && item.video?.visibility === "internal" && (
-                            <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                          )}
-                          <span className="leading-snug">{item.title}</span>
-                        </button>
-                        <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity`}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEditingItemId(item.id); setEditingItemTitle(item.title); }}
-                            className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}
-                            title="Rename"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item); }}
-                            className={`p-1.5 rounded ${isSelected ? "text-white/60 hover:text-red-300 hover:bg-white/20" : "text-gray-400 hover:text-red-600 hover:bg-red-50"}`}
-                            title="Delete"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSidebarDragEnd}>
+                <SortableContext items={categoryItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                  {categoryItems.map((item) => (
+                    <SortableSidebarItem
+                      key={item.id}
+                      item={item}
+                      isSelected={item.id === selectedItemId}
+                      isEditing={editingItemId === item.id}
+                      editTitle={editingItemTitle}
+                      colorBg={colorBg}
+                      onSelect={() => selectItem(item.id)}
+                      onStartEdit={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); }}
+                      onFinishEdit={() => handleRenameItem(item.id)}
+                      onEditChange={setEditingItemTitle}
+                      onDelete={() => handleDeleteItem(item)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </aside>
