@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getProduct, getVideo, getVideos, getChecklist } from "@/lib/kv";
+import { getBrandLabel } from "@/lib/brandIcons";
 
 const COLOR_HEX: Record<string, { bg: string; light: string; text: string }> = {
   blue:    { bg: "#2563eb", light: "#dbeafe", text: "#1d4ed8" },
@@ -113,7 +114,7 @@ function buildEmail({
             <!-- Product badge -->
             <div style="margin-bottom:14px;">
               <span style="display:inline-block;background:${col.light};color:${col.text};font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;">
-                ${product.emoji} ${product.name}
+                ${getBrandLabel(product.emoji)} ${product.name}
               </span>
               <span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;margin-left:6px;">
                 ${category}

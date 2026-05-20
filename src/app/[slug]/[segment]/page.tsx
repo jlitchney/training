@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -247,8 +248,8 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
             <img src="/logo-black.svg" alt="All-Star Training" className="h-6 w-auto" />
           </Link>
           <span className="text-gray-300">/</span>
-          <Link href={`/${slug}`} className="text-sm text-gray-500 hover:text-gray-900 transition-colors truncate">
-            {product.emoji} {product.name}
+          <Link href={`/${slug}`} className="text-sm text-gray-500 hover:text-gray-900 transition-colors truncate inline-flex items-center gap-1">
+            {renderIconColored(product.emoji, "w-3.5 h-3.5 flex-shrink-0")} {product.name}
           </Link>
           <span className="text-gray-300">/</span>
           <span className="text-sm font-medium text-gray-800 truncate">{category}</span>
@@ -351,8 +352,8 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
             <img src="/logo-white.svg" alt="All-Star Training" className="h-7 w-auto" />
           </Link>
           <span className="text-gray-700 flex-shrink-0">/</span>
-          <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0">
-            {product.emoji} {product.name}
+          <Link href={`/${slug}`} className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0 inline-flex items-center gap-1">
+            {renderIconColored(product.emoji, "w-3.5 h-3.5 flex-shrink-0")} {product.name}
           </Link>
           {category && (
             <>
@@ -387,7 +388,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
 
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full text-white ${c.bg}`}>
-              {product.emoji} {product.name}
+              {renderIcon(product.emoji, "w-3.5 h-3.5")} {product.name}
             </div>
             {category && (
               <Link href={`/${slug}/${encodeURIComponent(category)}`}

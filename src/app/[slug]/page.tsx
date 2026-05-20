@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
 interface Video { id: string; title: string; description: string; duration?: number; blobUrl?: string; }
@@ -107,7 +108,7 @@ export default function ProductPage() {
             <img src="/logo-black.svg" alt="All-Star Training" className="h-6 w-auto" />
           </Link>
           <span className="text-gray-300">/</span>
-          <span className="text-sm font-medium text-gray-700 truncate">{product.emoji} {product.name}</span>
+          <span className="text-sm font-medium text-gray-700 truncate inline-flex items-center gap-1">{renderIconColored(product.emoji, "w-4 h-4 flex-shrink-0")} {product.name}</span>
         </div>
       </header>
 
@@ -115,8 +116,8 @@ export default function ProductPage() {
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-start gap-4 mb-6">
-            <div className={`w-14 h-14 rounded-2xl ${c.bg} flex items-center justify-center text-3xl flex-shrink-0`}>
-              {product.emoji}
+            <div className={`w-14 h-14 rounded-2xl ${c.bg} flex items-center justify-center text-3xl flex-shrink-0 text-white`}>
+              {renderIcon(product.emoji, "w-8 h-8")}
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 mb-1">{product.name}</h1>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
+import { renderIcon } from "@/lib/renderIcon";
 
 interface Product {
   id: string;
@@ -120,8 +121,8 @@ export default function StudioPage() {
                 href={`/studio/${product.slug}`}
                 className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-gray-300 transition-all group flex items-start gap-4"
               >
-                <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
-                  {product.emoji}
+                <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center text-2xl flex-shrink-0 text-white`}>
+                  {renderIcon(product.emoji, "w-7 h-7")}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-base font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">{product.name}</h2>

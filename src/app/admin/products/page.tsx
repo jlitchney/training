@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
+import { BRAND_ICONS, isBrandIcon } from "@/lib/brandIcons";
+import { renderIconColored } from "@/lib/renderIcon";
 
 interface Product {
   id: string;
@@ -121,10 +123,31 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (e: string)
         onClick={() => setOpen((o) => !o)}
         className="w-12 h-12 rounded-xl border border-gray-300 bg-gray-50 flex items-center justify-center text-2xl hover:border-blue-400 transition-colors"
       >
-        {value}
+        {isBrandIcon(value) ? (
+          <svg viewBox="0 0 24 24" fill={BRAND_ICONS[value]?.hex ?? "#000"} className="w-7 h-7">
+            <path d={BRAND_ICONS[value]?.path ?? ""} />
+          </svg>
+        ) : value}
       </button>
       {open && (
         <div className="absolute left-0 top-14 z-20 bg-white rounded-xl border border-gray-200 shadow-lg p-3 w-80 max-h-72 overflow-y-auto">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 px-0.5">Brands</p>
+          <div className="flex flex-wrap gap-1 mb-3">
+            {Object.entries(BRAND_ICONS).map(([key, brand]) => (
+              <button
+                key={key}
+                type="button"
+                title={brand.label}
+                onClick={() => { onChange(key); setOpen(false); }}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors ${value === key ? "bg-blue-50 ring-1 ring-blue-300" : ""}`}
+              >
+                <svg viewBox="0 0 24 24" fill={brand.hex} className="w-5 h-5">
+                  <path d={brand.path} />
+                </svg>
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-gray-100 mb-2" />
           <div className="grid grid-cols-10 gap-1">
             {EMOJIS.map((emoji) => (
               <button
@@ -354,7 +377,7 @@ export default function AdminProductsPage() {
             ) : (
               <div key={product.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{product.emoji}</span>
+                  <span className="text-2xl flex items-center">{renderIconColored(product.emoji, "w-7 h-7")}</span>
                   <div>
                     <p className="font-medium text-gray-900 text-sm">{product.name}</p>
                     <p className="text-xs text-gray-400">{product.slug} · {product.description}</p>
