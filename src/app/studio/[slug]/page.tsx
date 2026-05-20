@@ -64,13 +64,14 @@ const GripIcon = () => (
 
 // ── Sortable category card ──────────────────────────────────────────
 function SortableCategoryCard({
-  cat, stats, product, onToggleVisibility, onRemoveFromFolder,
+  cat, stats, product, onToggleVisibility, onRemoveFromFolder, onDelete,
 }: {
   cat: string;
   stats: { total: number; covered: number; drafts: number };
   product: Product;
   onToggleVisibility: () => void;
   onRemoveFromFolder?: () => void;
+  onDelete?: () => void;
 }) {
   const { slug } = useParams<{ slug: string }>();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat });
@@ -94,6 +95,19 @@ function SortableCategoryCard({
       >
         <GripIcon />
       </div>
+
+      {/* Delete button */}
+      {onDelete && (
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+          className="absolute top-10 right-2.5 z-20 p-1.5 rounded-lg text-gray-300 opacity-0 group-hover/drag:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
+          title="Delete category"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      )}
 
       {/* Remove from folder button */}
       {onRemoveFromFolder && (
@@ -402,6 +416,39 @@ export default function StudioProductPage() {
     persistMeta(next);
   }
 
+  async function handleDeleteCategory(cat: string) {
+    const count = categories.get(cat)?.total ?? 0;
+    const msg = count > 0
+      ? `Delete "${cat}"? This will permanently remove all ${count} checklist item${count === 1 ? "" : "s"} in this category.`
+      : `Delete empty category "${cat}"?`;
+    if (!confirm(msg)) return;
+
+    const remaining = checklist.filter((i) => (i.category?.trim() || "Uncategorized") !== cat);
+    fetch("/api/checklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "reorder", productId: slug, items: remaining }),
+    });
+    setChecklist(remaining);
+
+    const newAssignment = { ...catMeta.folderAssignment };
+    delete newAssignment[cat];
+    const nextMeta: CategoryMeta = { ...catMeta, order: catMeta.order.filter((c) => c !== cat), folderAssignment: newAssignment };
+    setCatMeta(nextMeta);
+    persistMeta(nextMeta);
+
+    if (product?.categoryVisibility?.[cat] !== undefined) {
+      const newCatViz = { ...product.categoryVisibility };
+      delete newCatViz[cat];
+      setProduct((prev) => prev ? { ...prev, categoryVisibility: newCatViz } : null);
+      fetch(`/api/products/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryVisibility: newCatViz }),
+      });
+    }
+  }
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setDraggingCatId(null);
     setHoveringFolderId(null);
@@ -645,6 +692,7 @@ export default function StudioProductPage() {
                 <SortableCategoryCard
                   key={cat} cat={cat} stats={categories.get(cat)!}
                   product={product!} onToggleVisibility={() => toggleCategoryVisibility(cat)}
+                  onDelete={() => handleDeleteCategory(cat)}
                 />
               ))}
             </div>
@@ -680,6 +728,7 @@ export default function StudioProductPage() {
                         key={cat} cat={cat} stats={categories.get(cat)!}
                         product={product!} onToggleVisibility={() => toggleCategoryVisibility(cat)}
                         onRemoveFromFolder={() => handleRemoveFromFolder(cat)}
+                        onDelete={() => handleDeleteCategory(cat)}
                       />
                     ))}
                   </div>
@@ -769,6 +818,7 @@ export default function StudioProductPage() {
                           <SortableCategoryCard
                             key={cat} cat={cat} stats={categories.get(cat)!}
                             product={product!} onToggleVisibility={() => toggleCategoryVisibility(cat)}
+                            onDelete={() => handleDeleteCategory(cat)}
                           />
                         ))}
                       </div>
