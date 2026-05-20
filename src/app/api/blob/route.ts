@@ -11,14 +11,27 @@ export async function GET(req: NextRequest) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return NextResponse.json({ error: "Not configured" }, { status: 500 });
 
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) return NextResponse.json({ error: `Blob fetch failed: ${res.status}` }, { status: res.status });
+  const upstreamHeaders: Record<string, string> = { Authorization: `Bearer ${token}` };
+  const range = req.headers.get("range");
+  if (range) upstreamHeaders["range"] = range;
 
-  const body = await res.arrayBuffer();
-  return new NextResponse(body, {
-    headers: {
-      "Content-Type": res.headers.get("Content-Type") ?? "application/octet-stream",
-      "Cache-Control": "private, max-age=3600",
-    },
+  const upstream = await fetch(url, { headers: upstreamHeaders });
+  if (!upstream.ok && upstream.status !== 206) {
+    return NextResponse.json({ error: `Blob fetch failed: ${upstream.status}` }, { status: upstream.status });
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+    "Cache-Control": "private, max-age=3600",
+    "Accept-Ranges": "bytes",
+  };
+  const contentRange = upstream.headers.get("content-range");
+  const contentLength = upstream.headers.get("content-length");
+  if (contentRange) headers["Content-Range"] = contentRange;
+  if (contentLength) headers["Content-Length"] = contentLength;
+
+  return new NextResponse(upstream.body, {
+    status: upstream.status,
+    headers,
   });
 }

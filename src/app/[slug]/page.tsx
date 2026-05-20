@@ -161,12 +161,8 @@ export default function ProductPage() {
                   href={`/${slug}/${v.id}`}
                   className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-sm hover:border-gray-300 transition-all group"
                 >
-                  <div className={`w-10 h-10 rounded-lg ${c.light} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
-                    {v.blobUrl ? (
-                      <video src={blobSrc(v.blobUrl)} preload="metadata" muted className="w-full h-full object-cover" />
-                    ) : (
-                      <span className={`text-xs ${c.text}`}>▶</span>
-                    )}
+                  <div className={`w-10 h-10 rounded-lg ${c.light} flex-shrink-0 flex items-center justify-center`}>
+                    <span className={`text-xs ${c.text}`}>▶</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">{v.title}</p>

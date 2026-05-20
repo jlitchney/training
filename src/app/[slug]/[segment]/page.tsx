@@ -172,11 +172,8 @@ function VideoCard({ video, slug, color, productName, category }: {
         className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all flex flex-col"
       >
         <div className={`relative aspect-video ${c.light} flex items-center justify-center overflow-hidden`}>
-          <video src={blobSrc(video.blobUrl)} preload="metadata" muted className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <div className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-              <span className={`text-sm pl-0.5 ${c.text}`}>▶</span>
-            </div>
+          <div className="w-12 h-12 rounded-full bg-white/80 group-hover:bg-white/95 group-hover:scale-105 transition-all flex items-center justify-center shadow-md">
+            <span className={`text-base pl-0.5 ${c.text}`}>▶</span>
           </div>
           {video.duration && (
             <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
@@ -382,7 +379,7 @@ function VideoView({ slug, videoId }: { slug: string; videoId: string }) {
         <div className="lg:col-span-2">
           <div className="bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center mb-6">
             {isVideo
-              ? <video key={playing.id} src={blobSrc(playing.blobUrl)} controls autoPlay={false} className="w-full h-full" />
+              ? <video key={playing.id} src={blobSrc(playing.blobUrl)} controls autoPlay={false} playsInline className="w-full h-full" />
               : <div className="text-gray-500 text-sm">Unsupported format</div>}
           </div>
 
