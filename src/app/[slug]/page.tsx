@@ -8,6 +8,7 @@ import { renderIcon, renderIconColored } from "@/lib/renderIcon";
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; }
 interface Video { id: string; title: string; description: string; duration?: number; blobUrl?: string; thumbnailUrl?: string; }
+interface Article { id: string; title: string; category?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string; border: string }> = {
   blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200" },
@@ -45,6 +46,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [catMap, setCatMap] = useState<Record<string, string>>({});
+  const [articles, setArticles] = useState<Article[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -53,15 +55,17 @@ export default function ProductPage() {
       fetch("/api/products").then((r) => r.json()),
       fetch(`/api/videos?productId=${slug}&publishedOnly=true`).then((r) => r.json()),
       fetch(`/api/video-categories?productId=${slug}`).then((r) => r.json()),
-    ]).then(([prods, vids, cats]: [Product[], Video[], Record<string, string>]) => {
+      fetch(`/api/articles?productId=${slug}`).then((r) => r.json()),
+    ]).then(([prods, vids, cats, arts]: [Product[], Video[], Record<string, string>, Article[]]) => {
       setProduct(prods.find((p) => p.slug === slug) ?? null);
       setVideos(vids);
       setCatMap(cats);
+      setArticles(Array.isArray(arts) ? arts : []);
       setLoading(false);
     });
   }, [slug]);
 
-  // Ordered category list preserving insertion order
+  // Ordered category list preserving insertion order (videos first, then any article-only categories)
   const categories = useMemo(() => {
     const seen = new Set<string>();
     const order: string[] = [];
@@ -69,8 +73,12 @@ export default function ProductPage() {
       const cat = catMap[video.id];
       if (cat && !seen.has(cat)) { seen.add(cat); order.push(cat); }
     }
+    for (const art of articles) {
+      const cat = art.category?.trim() || "Uncategorized";
+      if (!seen.has(cat)) { seen.add(cat); order.push(cat); }
+    }
     return order;
-  }, [videos, catMap]);
+  }, [videos, catMap, articles]);
 
   const query = search.trim().toLowerCase();
 
@@ -83,16 +91,21 @@ export default function ProductPage() {
     );
   }, [videos, query]);
 
-  // Per-category video lists (for category cards)
-  const categoryVideos = useMemo(() => {
-    const map = new Map<string, Video[]>();
+  // Per-category counts (for category cards)
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, { videos: number; articles: number }>();
     for (const video of videos) {
       const cat = catMap[video.id] ?? "Other";
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(video);
+      const cur = map.get(cat) ?? { videos: 0, articles: 0 };
+      map.set(cat, { ...cur, videos: cur.videos + 1 });
+    }
+    for (const art of articles) {
+      const cat = art.category?.trim() || "Uncategorized";
+      const cur = map.get(cat) ?? { videos: 0, articles: 0 };
+      map.set(cat, { ...cur, articles: cur.articles + 1 });
     }
     return map;
-  }, [videos, catMap]);
+  }, [videos, catMap, articles]);
 
   if (loading || authStatus === "loading") return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
   if (!product) {
@@ -152,9 +165,9 @@ export default function ProductPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        {videos.length === 0 ? (
+        {videos.length === 0 && articles.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400">No videos published yet.</p>
+            <p className="text-gray-400">No content published yet.</p>
           </div>
         ) : query ? (
           /* Search results: flat video list */
@@ -201,7 +214,10 @@ export default function ProductPage() {
           /* Category cards */
           <div className="grid gap-3 sm:grid-cols-2">
             {categories.map((cat) => {
-              const catVids = categoryVideos.get(cat) ?? [];
+              const counts = categoryCounts.get(cat) ?? { videos: 0, articles: 0 };
+              const parts: string[] = [];
+              if (counts.videos > 0) parts.push(`${counts.videos} video${counts.videos !== 1 ? "s" : ""}`);
+              if (counts.articles > 0) parts.push(`${counts.articles} article${counts.articles !== 1 ? "s" : ""}`);
               return (
                 <Link
                   key={cat}
@@ -217,9 +233,7 @@ export default function ProductPage() {
                     <h2 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight">
                       {cat}
                     </h2>
-                    <p className="text-sm text-gray-400 mt-0.5">
-                      {catVids.length} video{catVids.length !== 1 ? "s" : ""}
-                    </p>
+                    <p className="text-sm text-gray-400 mt-0.5">{parts.join(" · ") || "0 items"}</p>
                   </div>
                   <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

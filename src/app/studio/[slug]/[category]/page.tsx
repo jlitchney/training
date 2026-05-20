@@ -14,7 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; }
-interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
+interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; type?: "video" | "article"; articleContent?: string; visibility?: "public" | "internal"; }
 
 const COLOR_BG: Record<string, string> = {
   blue: "bg-blue-600", indigo: "bg-indigo-600", violet: "bg-violet-600",
@@ -139,10 +139,11 @@ function SortableSidebarItem({
   onEditChange: (v: string) => void; onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const isDone = !!item.videoId;
-  const isPublished = isDone && item.video?.published === true;
-  const isDraft = isDone && !isPublished;
-  const icon = isPublished ? "✅" : isDraft ? "🟡" : "⬜";
+  const isArticle = item.type === "article";
+  const isDone = isArticle ? !!item.articleContent?.trim() : !!item.videoId;
+  const isPublished = isArticle ? isDone : isDone && item.video?.published === true;
+  const isDraft = !isArticle && isDone && !isPublished;
+  const icon = isDone ? "✅" : isDraft ? "🟡" : null;
 
   return (
     <div
@@ -178,8 +179,21 @@ function SortableSidebarItem({
               isSelected ? `${colorBg} text-white` : "text-gray-700 hover:bg-gray-50"
             }`}
           >
-            <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
-            {isDone && item.video?.visibility === "internal" && (
+            {icon ? (
+              <span className="flex-shrink-0 mt-0.5 text-xs leading-none">{icon}</span>
+            ) : isArticle ? (
+              <svg className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-70" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            ) : (
+              <span className="flex-shrink-0 mt-0.5 text-xs leading-none">⬜</span>
+            )}
+            {!isArticle && isDone && item.video?.visibility === "internal" && (
+              <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            )}
+            {isArticle && item.visibility === "internal" && (
               <svg className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isSelected ? "text-white opacity-60" : "text-amber-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
@@ -226,9 +240,13 @@ export default function StudioCategoryPage() {
   const [showAddItem, setShowAddItem] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addSaving, setAddSaving] = useState(false);
+  const [addType, setAddType] = useState<"video" | "article">("video");
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemTitle, setEditingItemTitle] = useState("");
+
+  const [articleDraft, setArticleDraft] = useState("");
+  const [articleSaving, setArticleSaving] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -285,12 +303,25 @@ export default function StudioCategoryPage() {
     [checklist, decodedCategory]
   );
 
+  const selectedItem = useMemo(
+    () => categoryItems.find((i) => i.id === selectedItemId) ?? null,
+    [categoryItems, selectedItemId]
+  );
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
+
   // Auto-select first covered item on load, or first item if none covered
   useEffect(() => {
     if (loading || categoryItems.length === 0 || selectedItemId) return;
-    const covered = categoryItems.find((i) => i.videoId);
+    const covered = categoryItems.find((i) => i.type === "article" ? !!i.articleContent?.trim() : !!i.videoId);
     setSelectedItemId((covered ?? categoryItems[0]).id);
   }, [loading, categoryItems, selectedItemId]);
+
+  // Sync article draft when selected item changes
+  useEffect(() => {
+    if (selectedItem?.type === "article") {
+      setArticleDraft(selectedItem.articleContent ?? "");
+    }
+  }, [selectedItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Silently generate + save thumbnails for existing videos that don't have one
   useEffect(() => {
@@ -320,21 +351,15 @@ export default function StudioCategoryPage() {
     return Array.from(set);
   }, [checklist]);
 
-  const selectedItem = useMemo(
-    () => categoryItems.find((i) => i.id === selectedItemId) ?? null,
-    [categoryItems, selectedItemId]
-  );
-  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
-
   const linkedVideo = useMemo(() => {
     if (selectedItem?.video) return selectedItem.video;
     if (!selectedItem?.videoId) return null;
     return videos.find((v) => v.id === selectedItem.videoId) ?? getCachedVideo(selectedItem.videoId);
   }, [selectedItem, videos]);
 
-  const categoryCovered = categoryItems.filter((i) => i.videoId).length;
-  const categoryPublished = categoryItems.filter((i) => i.video?.published).length;
-  const categoryDrafts = categoryCovered - categoryPublished;
+  const categoryCovered = categoryItems.filter((i) => i.type === "article" ? !!i.articleContent?.trim() : !!i.videoId).length;
+  const categoryPublished = categoryItems.filter((i) => i.type === "article" ? !!i.articleContent?.trim() : !!i.video?.published).length;
+  const categoryDrafts = categoryItems.filter((i) => i.type !== "article" && !!i.videoId && !i.video?.published).length;
   const published = videos.filter((v) => v.published).length;
   const colorBg = COLOR_BG[product?.color ?? "blue"] ?? "bg-blue-600";
   const colorBadge = COLOR_BADGE[product?.color ?? "blue"] ?? COLOR_BADGE.blue;
@@ -357,7 +382,7 @@ export default function StudioCategoryPage() {
       const res = await fetch("/api/checklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "add", productId: slug, title: addTitle.trim(), category: decodedCategory }),
+        body: JSON.stringify({ type: "add", productId: slug, title: addTitle.trim(), category: decodedCategory, itemType: addType }),
       });
       if (res.ok) {
         const item: ChecklistItem = await res.json();
@@ -402,6 +427,32 @@ export default function StudioCategoryPage() {
     });
     setChecklist((prev) => prev.filter((i) => i.id !== item.id));
     if (selectedItemId === item.id) setSelectedItemId(null);
+  }
+
+  async function handleSaveArticle() {
+    if (!selectedItemId) return;
+    setArticleSaving(true);
+    try {
+      const res = await fetch("/api/checklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "update", productId: slug, itemId: selectedItemId, articleContent: articleDraft }),
+      });
+      if (res.ok) setChecklist((prev) => prev.map((i) => i.id === selectedItemId ? { ...i, articleContent: articleDraft } : i));
+    } finally {
+      setArticleSaving(false);
+    }
+  }
+
+  async function toggleArticleVisibility() {
+    if (!selectedItem) return;
+    const next = (selectedItem.visibility ?? "public") === "internal" ? "public" : "internal";
+    const res = await fetch("/api/checklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "update", productId: slug, itemId: selectedItem.id, visibility: next }),
+    });
+    if (res.ok) setChecklist((prev) => prev.map((i) => i.id === selectedItem.id ? { ...i, visibility: next } : i));
   }
 
   function handleSidebarDragEnd(event: DragEndEvent) {
@@ -676,7 +727,7 @@ export default function StudioCategoryPage() {
           <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">{decodedCategory}</span>
             <button
-              onClick={() => { setShowAddItem((s) => !s); setAddTitle(""); }}
+              onClick={() => { setShowAddItem((s) => !s); setAddTitle(""); setAddType("video"); }}
               className="text-xs text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 rounded px-2 py-0.5 transition-colors flex-shrink-0 ml-2"
             >
               + Add
@@ -685,6 +736,22 @@ export default function StudioCategoryPage() {
 
           {showAddItem && (
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+              <div className="flex gap-1 mb-2">
+                <button
+                  onClick={() => setAddType("video")}
+                  className={`flex-1 flex items-center justify-center gap-1 text-xs rounded py-1 font-medium transition-colors ${addType === "video" ? "bg-white border border-blue-400 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" /></svg>
+                  Video
+                </button>
+                <button
+                  onClick={() => setAddType("article")}
+                  className={`flex-1 flex items-center justify-center gap-1 text-xs rounded py-1 font-medium transition-colors ${addType === "article" ? "bg-white border border-blue-400 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  Article
+                </button>
+              </div>
               <input
                 type="text"
                 value={addTitle}
@@ -749,154 +816,192 @@ export default function StudioCategoryPage() {
             </div>
           ) : (
             <div className="max-w-2xl">
-              <div className="mb-5">
-                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border mb-2 ${colorBadge}`}>
-                  {decodedCategory}
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border mb-2 ${colorBadge}`}>
+                    {decodedCategory}
+                  </span>
+                  <h1 className="text-xl font-bold text-gray-900">{selectedItem.title}</h1>
+                  {selectedItem.description && <p className="text-sm text-gray-500 mt-1">{selectedItem.description}</p>}
+                </div>
+                <span className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border mt-1 ${selectedItem.type === "article" ? "border-indigo-200 bg-indigo-50 text-indigo-600" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
+                  {selectedItem.type === "article" ? "Article" : "Video"}
                 </span>
-                <h1 className="text-xl font-bold text-gray-900">{selectedItem.title}</h1>
-                {selectedItem.description && <p className="text-sm text-gray-500 mt-1">{selectedItem.description}</p>}
               </div>
 
-              {!pendingBlobUrl && (
-                <div className="mb-6">
-                  {uploading ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin inline-block" />
-                      Uploading recording…
-                    </div>
-                  ) : recording ? (
-                    <button onClick={stopRecording} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition-colors">
-                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                      Stop Recording
-                    </button>
-                  ) : !linkedVideo ? (
-                    <button onClick={startRecording} className={`flex items-center gap-2 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition-colors ${colorBg}`}>
-                      ● Record Screen
-                    </button>
-                  ) : null}
-                  {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
-                </div>
-              )}
-
-              {pendingBlobUrl && (
-                <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-                  <h2 className="font-semibold text-gray-900 mb-4">Save Recording</h2>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Title <span className="text-red-500">*</span></label>
-                        <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} autoFocus
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
-                        <input type="text" value={formCategory} onChange={(e) => setFormCategory(e.target.value)} list="form-cat-list"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-                        <datalist id="form-cat-list">
-                          {allCategoryNames.map((c) => <option key={c} value={c} />)}
-                        </datalist>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-medium text-gray-600">Description</label>
-                        <button onClick={generateDescription} disabled={generating}
-                          className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 transition-colors">
-                          {generating ? (
-                            <><span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin inline-block" /> Generating…</>
-                          ) : <>✨ Generate with AI</>}
-                        </button>
-                      </div>
-                      <RichTextEditor
-                        value={formDesc}
-                        onChange={setFormDesc}
-                        placeholder="Describe what this video covers, or use ✨ Generate"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-3 mt-4">
-                    <button onClick={handleSaveVideo} disabled={saving || !formTitle.trim()}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors">
-                      {saving ? "Saving…" : "Save Video"}
-                    </button>
-                    <button onClick={() => { setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc(""); }}
-                      className="flex-1 border border-gray-300 text-gray-700 text-sm rounded-lg py-2 hover:bg-gray-50 transition-colors">
-                      Discard
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {linkedVideo ? (
+              {selectedItem.type === "article" ? (
+                /* ── Article editor ── */
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${linkedVideo.published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {linkedVideo.published ? "Published" : "Draft"}
-                        </span>
-                        {linkedVideo.duration && <span className="text-xs text-gray-400">{formatDuration(linkedVideo.duration)}</span>}
-                      </div>
-                      <h3 className="font-medium text-gray-900">{linkedVideo.title}</h3>
-                      {linkedVideo.description && (
-                        <div className="text-sm text-gray-500 mt-1 prose-sm [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold"
-                          dangerouslySetInnerHTML={{ __html: linkedVideo.description }} />
-                      )}
-                      <p className="text-xs text-gray-400 mt-1.5">by {linkedVideo.recordedBy} · {new Date(linkedVideo.recordedAt).toLocaleDateString()}</p>
-                    </div>
-                    <button onClick={() => setPreviewVideo(linkedVideo)} className="flex-shrink-0 relative group">
-                      <video src={blobSrc(linkedVideo.blobUrl)} className="w-32 h-20 rounded object-cover bg-gray-100" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xl">▶</span>
-                      </div>
-                    </button>
-                  </div>
-                  {publishError && <p className="mt-2 text-sm text-red-600">{publishError}</p>}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <button onClick={() => togglePublish(linkedVideo)}
-                      className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${linkedVideo.published ? "border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-600" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
-                      {linkedVideo.published ? "Unpublish" : "Publish"}
-                    </button>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-gray-900 text-sm">Article Content</h2>
                     {(() => {
-                      const inheritedFrom =
-                        product?.visibility === "internal" ? "product"
+                      const inheritedFrom = product?.visibility === "internal" ? "product"
                         : (product?.categoryVisibility?.[decodedCategory] ?? "public") === "internal" ? "category"
                         : null;
                       return inheritedFrom ? (
-                        <span
-                          className="text-xs font-medium px-3 py-1 rounded-full border border-amber-200 text-amber-600 bg-amber-50"
-                          title={`Restricted by ${inheritedFrom} visibility`}
-                        >
+                        <span className="text-xs font-medium px-3 py-1 rounded-full border border-amber-200 text-amber-600 bg-amber-50" title={`Restricted by ${inheritedFrom} visibility`}>
                           🔒 via {inheritedFrom}
                         </span>
                       ) : (
                         <button
-                          onClick={() => toggleVideoVisibility(linkedVideo)}
-                          className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(linkedVideo.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                          onClick={toggleArticleVisibility}
+                          className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(selectedItem.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
                         >
-                          {(linkedVideo.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                          {(selectedItem.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
                         </button>
                       );
                     })()}
-                    <button onClick={() => { setEditVideo(linkedVideo); setEditTitle(linkedVideo.title); setEditDesc(linkedVideo.description); }}
-                      className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors">
-                      Edit
-                    </button>
-                    <button onClick={startRecording} disabled={recording || uploading}
-                      className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors disabled:opacity-50">
-                      Re-record
-                    </button>
-                    <button onClick={() => handleDelete(linkedVideo)} className="text-xs text-gray-400 hover:text-red-600 px-3 py-1 transition-colors ml-auto">
-                      Delete
+                  </div>
+                  <RichTextEditor
+                    value={articleDraft}
+                    onChange={setArticleDraft}
+                    placeholder="Write your article content here…"
+                  />
+                  <div className="mt-4">
+                    <button
+                      onClick={handleSaveArticle}
+                      disabled={articleSaving}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg px-5 py-2 transition-colors"
+                    >
+                      {articleSaving ? "Saving…" : "Save Article"}
                     </button>
                   </div>
                 </div>
-              ) : !pendingBlobUrl && !recording && !uploading ? (
-                <div className="bg-white rounded-xl border border-dashed border-gray-300 px-6 py-10 text-center">
-                  <p className="text-sm text-gray-400">No recording yet for this item.</p>
-                  <p className="text-xs text-gray-300 mt-1">Hit "Record Screen" above to get started.</p>
-                </div>
-              ) : null}
+              ) : (
+                /* ── Video UI ── */
+                <>
+                  {!pendingBlobUrl && (
+                    <div className="mb-6">
+                      {uploading ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin inline-block" />
+                          Uploading recording…
+                        </div>
+                      ) : recording ? (
+                        <button onClick={stopRecording} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition-colors">
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                          Stop Recording
+                        </button>
+                      ) : !linkedVideo ? (
+                        <button onClick={startRecording} className={`flex items-center gap-2 text-white text-sm font-medium rounded-lg px-5 py-2.5 transition-colors ${colorBg}`}>
+                          ● Record Screen
+                        </button>
+                      ) : null}
+                      {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
+                    </div>
+                  )}
+
+                  {pendingBlobUrl && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+                      <h2 className="font-semibold text-gray-900 mb-4">Save Recording</h2>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Title <span className="text-red-500">*</span></label>
+                            <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} autoFocus
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                            <input type="text" value={formCategory} onChange={(e) => setFormCategory(e.target.value)} list="form-cat-list"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+                            <datalist id="form-cat-list">
+                              {allCategoryNames.map((c) => <option key={c} value={c} />)}
+                            </datalist>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-600">Description</label>
+                            <button onClick={generateDescription} disabled={generating}
+                              className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 transition-colors">
+                              {generating ? (
+                                <><span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin inline-block" /> Generating…</>
+                              ) : <>✨ Generate with AI</>}
+                            </button>
+                          </div>
+                          <RichTextEditor value={formDesc} onChange={setFormDesc} placeholder="Describe what this video covers, or use ✨ Generate" />
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-4">
+                        <button onClick={handleSaveVideo} disabled={saving || !formTitle.trim()}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors">
+                          {saving ? "Saving…" : "Save Video"}
+                        </button>
+                        <button onClick={() => { setPendingBlobUrl(""); setFormTitle(""); setFormCategory(""); setFormDesc(""); }}
+                          className="flex-1 border border-gray-300 text-gray-700 text-sm rounded-lg py-2 hover:bg-gray-50 transition-colors">
+                          Discard
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {linkedVideo ? (
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${linkedVideo.published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                              {linkedVideo.published ? "Published" : "Draft"}
+                            </span>
+                            {linkedVideo.duration && <span className="text-xs text-gray-400">{formatDuration(linkedVideo.duration)}</span>}
+                          </div>
+                          <h3 className="font-medium text-gray-900">{linkedVideo.title}</h3>
+                          {linkedVideo.description && (
+                            <div className="text-sm text-gray-500 mt-1 prose-sm [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold"
+                              dangerouslySetInnerHTML={{ __html: linkedVideo.description }} />
+                          )}
+                          <p className="text-xs text-gray-400 mt-1.5">by {linkedVideo.recordedBy} · {new Date(linkedVideo.recordedAt).toLocaleDateString()}</p>
+                        </div>
+                        <button onClick={() => setPreviewVideo(linkedVideo)} className="flex-shrink-0 relative group">
+                          <video src={blobSrc(linkedVideo.blobUrl)} className="w-32 h-20 rounded object-cover bg-gray-100" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-xl">▶</span>
+                          </div>
+                        </button>
+                      </div>
+                      {publishError && <p className="mt-2 text-sm text-red-600">{publishError}</p>}
+                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                        <button onClick={() => togglePublish(linkedVideo)}
+                          className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${linkedVideo.published ? "border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-600" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
+                          {linkedVideo.published ? "Unpublish" : "Publish"}
+                        </button>
+                        {(() => {
+                          const inheritedFrom = product?.visibility === "internal" ? "product"
+                            : (product?.categoryVisibility?.[decodedCategory] ?? "public") === "internal" ? "category"
+                            : null;
+                          return inheritedFrom ? (
+                            <span className="text-xs font-medium px-3 py-1 rounded-full border border-amber-200 text-amber-600 bg-amber-50" title={`Restricted by ${inheritedFrom} visibility`}>
+                              🔒 via {inheritedFrom}
+                            </span>
+                          ) : (
+                            <button onClick={() => toggleVideoVisibility(linkedVideo)}
+                              className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors ${(linkedVideo.visibility ?? "public") === "internal" ? "border-amber-300 text-amber-600 bg-amber-50" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+                              {(linkedVideo.visibility ?? "public") === "internal" ? "🔒 Internal" : "🌐 Public"}
+                            </button>
+                          );
+                        })()}
+                        <button onClick={() => { setEditVideo(linkedVideo); setEditTitle(linkedVideo.title); setEditDesc(linkedVideo.description); }}
+                          className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors">
+                          Edit
+                        </button>
+                        <button onClick={startRecording} disabled={recording || uploading}
+                          className="text-xs text-gray-500 hover:text-gray-900 px-3 py-1 border border-gray-200 rounded-full transition-colors disabled:opacity-50">
+                          Re-record
+                        </button>
+                        <button onClick={() => handleDelete(linkedVideo)} className="text-xs text-gray-400 hover:text-red-600 px-3 py-1 transition-colors ml-auto">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ) : !pendingBlobUrl && !recording && !uploading ? (
+                    <div className="bg-white rounded-xl border border-dashed border-gray-300 px-6 py-10 text-center">
+                      <p className="text-sm text-gray-400">No recording yet for this item.</p>
+                      <p className="text-xs text-gray-300 mt-1">Hit "Record Screen" above to get started.</p>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           )}
         </main>

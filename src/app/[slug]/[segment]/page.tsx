@@ -11,6 +11,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 interface Product { id: string; name: string; slug: string; description: string; color: string; emoji: string; visibility?: "public" | "internal"; categoryVisibility?: Record<string, "public" | "internal">; }
 interface Video { id: string; title: string; description: string; blobUrl: string; duration?: number; recordedAt: string; thumbnailUrl?: string; }
+interface Article { id: string; title: string; description?: string; category?: string; articleContent: string; }
 
 const COLOR_MAP: Record<string, { bg: string; light: string; text: string }> = {
   blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    text: "text-blue-700" },
@@ -276,12 +277,54 @@ function VideoCard({ video, slug, color, productName, category }: {
   );
 }
 
+// ── Article card ─────────────────────────────────────────────────────
+function ArticleCard({ article, color }: { article: Article; color: string }) {
+  const c = col(color);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left flex items-center gap-4 p-5"
+      >
+        <div className={`w-10 h-10 rounded-xl ${c.light} flex items-center justify-center flex-shrink-0`}>
+          <svg className={`w-5 h-5 ${c.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className={`font-semibold text-gray-900 leading-snug ${c.text} group-hover:opacity-80 transition-colors`}>{article.title}</h3>
+          {article.description && !open && (
+            <p className="text-sm text-gray-400 mt-0.5 truncate">{article.description}</p>
+          )}
+        </div>
+        <svg
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-gray-100">
+          <div
+            className="pt-4 prose prose-sm max-w-none text-gray-700 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:rounded [&_blockquote]:border-l-4 [&_blockquote]:border-gray-200 [&_blockquote]:pl-4 [&_blockquote]:text-gray-500"
+            dangerouslySetInnerHTML={{ __html: article.articleContent }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Category page ────────────────────────────────────────────────────
 function CategoryView({ slug, category }: { slug: string; category: string }) {
   const router = useRouter();
   const { status: authStatus } = useSession();
   const [product, setProduct] = useState<Product | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -290,9 +333,12 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
       fetch("/api/products").then((r) => r.json()),
       fetch(`/api/videos?productId=${slug}&publishedOnly=true`).then((r) => r.json()),
       fetch(`/api/video-categories?productId=${slug}`).then((r) => r.json()),
-    ]).then(([prods, vids, cats]: [Product[], Video[], Record<string, string>]) => {
+      fetch(`/api/articles?productId=${slug}`).then((r) => r.json()),
+    ]).then(([prods, vids, cats, arts]: [Product[], Video[], Record<string, string>, Article[]]) => {
       setProduct(prods.find((p) => p.slug === slug) ?? null);
       setVideos(vids.filter((v) => cats[v.id] === category));
+      const artArr = Array.isArray(arts) ? arts : [];
+      setArticles(artArr.filter((a) => (a.category?.trim() || "Uncategorized") === category));
       setLoading(false);
     });
   }, [slug, category]);
@@ -304,6 +350,13 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
       (v.description ?? "").replace(/<[^>]*>/g, " ").toLowerCase().includes(query)
     ) : videos,
     [videos, query]
+  );
+  const articleResults = useMemo(() =>
+    query ? articles.filter((a) =>
+      a.title.toLowerCase().includes(query) ||
+      a.articleContent.replace(/<[^>]*>/g, " ").toLowerCase().includes(query)
+    ) : articles,
+    [articles, query]
   );
 
   if (loading || authStatus === "loading") return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>;
@@ -348,7 +401,12 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 mb-1">{product.name} – {category}</h1>
-              <p className="text-sm text-gray-500">{videos.length} video{videos.length !== 1 ? "s" : ""}</p>
+              <p className="text-sm text-gray-500">
+                {[
+                  videos.length > 0 ? `${videos.length} video${videos.length !== 1 ? "s" : ""}` : "",
+                  articles.length > 0 ? `${articles.length} article${articles.length !== 1 ? "s" : ""}` : "",
+                ].filter(Boolean).join(" · ") || "No content yet"}
+              </p>
             </div>
           </div>
 
@@ -360,23 +418,42 @@ function CategoryView({ slug, category }: { slug: string; category: string }) {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={`Search ${category} videos…`}
+              placeholder={`Search ${category}…`}
               className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-gray-50"
             />
           </div>
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        {query && results.length === 0 ? (
-          <p className="text-sm text-gray-400">No results for "{search}"</p>
+      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        {query && results.length === 0 && articleResults.length === 0 ? (
+          <p className="text-sm text-gray-400">No results for &ldquo;{search}&rdquo;</p>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((v) => <VideoCard key={v.id} video={v} slug={slug} color={product.color} productName={product.name} category={category} />)}
-          </div>
+          <>
+            {articleResults.length > 0 && (
+              <div>
+                {!query && videos.length > 0 && (
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Articles</h2>
+                )}
+                <div className="space-y-3">
+                  {articleResults.map((a) => <ArticleCard key={a.id} article={a} color={product.color} />)}
+                </div>
+              </div>
+            )}
+            {results.length > 0 && (
+              <div>
+                {!query && articles.length > 0 && (
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Videos</h2>
+                )}
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {results.map((v) => <VideoCard key={v.id} video={v} slug={slug} color={product.color} productName={product.name} category={category} />)}
+                </div>
+              </div>
+            )}
+          </>
         )}
-        {videos.length === 0 && !loading && (
-          <div className="text-center py-20 text-gray-400">No videos in this category yet.</div>
+        {videos.length === 0 && articles.length === 0 && !loading && (
+          <div className="text-center py-20 text-gray-400">No content in this category yet.</div>
         )}
       </main>
     </div>

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   if (body.type === "add") {
-    const item = await addChecklistItem(body.productId, body.title, body.description, body.category ?? undefined);
+    const item = await addChecklistItem(body.productId, body.title, body.description, body.category ?? undefined, body.itemType ?? undefined);
     return NextResponse.json(item, { status: 201 });
   }
 
@@ -34,11 +34,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.type === "update") {
-    const item = await updateChecklistItem(body.productId, body.itemId, {
-      title: body.title,
-      category: body.category,
-      description: body.description,
-    });
+    const patch: Parameters<typeof updateChecklistItem>[2] = {
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.category !== undefined && { category: body.category }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.articleContent !== undefined && { articleContent: body.articleContent }),
+      ...(body.visibility !== undefined && { visibility: body.visibility }),
+    };
+    const item = await updateChecklistItem(body.productId, body.itemId, patch);
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(item);
   }

@@ -33,7 +33,7 @@ interface CategoryMeta {
   folderAssignment: Record<string, string>;
 }
 interface EmbeddedVideo { id: string; title: string; published: boolean; }
-interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; }
+interface ChecklistItem { id: string; title: string; category?: string; videoId?: string; video?: EmbeddedVideo; type?: "video" | "article"; articleContent?: string; }
 
 const COLOR_MAP: Record<string, { bg: string; iconBg: string; iconText: string; bar: string }> = {
   blue:    { bg: "bg-blue-600",    iconBg: "bg-blue-50",    iconText: "text-blue-600",    bar: "bg-blue-500" },
@@ -339,8 +339,9 @@ export default function StudioProductPage() {
     for (const item of checklist) {
       const cat = item.category?.trim() || "Uncategorized";
       const cur = map.get(cat) ?? { total: 0, covered: 0, drafts: 0 };
-      const hasDraft = !!item.videoId && !item.video?.published;
-      map.set(cat, { total: cur.total + 1, covered: cur.covered + (item.videoId ? 1 : 0), drafts: cur.drafts + (hasDraft ? 1 : 0) });
+      const isCovered = item.type === "article" ? !!item.articleContent?.trim() : !!item.videoId;
+      const hasDraft = item.type !== "article" && !!item.videoId && !item.video?.published;
+      map.set(cat, { total: cur.total + 1, covered: cur.covered + (isCovered ? 1 : 0), drafts: cur.drafts + (hasDraft ? 1 : 0) });
     }
     return map;
   }, [checklist]);
@@ -353,7 +354,7 @@ export default function StudioProductPage() {
     return [...known, ...rest];
   }, [categories, catMeta.order]);
 
-  const totalCovered = checklist.filter((i) => i.videoId).length;
+  const totalCovered = checklist.filter((i) => i.type === "article" ? !!i.articleContent?.trim() : !!i.videoId).length;
   const draftItems = useMemo(() => checklist.filter((i) => i.videoId && i.video && !i.video.published), [checklist]);
 
   // Folder-aware derived lists

@@ -43,6 +43,9 @@ export interface ChecklistItem {
   videoId?: string;
   video?: Video; // embedded for reliable single-key reads
   order: number;
+  type?: "video" | "article"; // defaults to "video" when absent
+  articleContent?: string;    // rich-text HTML for article items
+  visibility?: "public" | "internal"; // item-level visibility (articles)
 }
 
 const PRODUCTS_KEY = "training:products:v1";
@@ -397,7 +400,7 @@ export async function saveChecklist(productId: string, items: ChecklistItem[]): 
   await db.set(checklistKey(productId), items);
 }
 
-export async function addChecklistItem(productId: string, title: string, description?: string, category?: string): Promise<ChecklistItem> {
+export async function addChecklistItem(productId: string, title: string, description?: string, category?: string, type?: "video" | "article"): Promise<ChecklistItem> {
   const items = await getChecklist(productId);
   const newItem: ChecklistItem = {
     id: uuidv4(),
@@ -406,12 +409,13 @@ export async function addChecklistItem(productId: string, title: string, descrip
     description: description ?? "",
     category,
     order: items.length + 1,
+    ...(type && type !== "video" ? { type } : {}),
   };
   await saveChecklist(productId, [...items, newItem]);
   return newItem;
 }
 
-export async function updateChecklistItem(productId: string, itemId: string, patch: Partial<Pick<ChecklistItem, "title" | "description" | "category">>): Promise<ChecklistItem | null> {
+export async function updateChecklistItem(productId: string, itemId: string, patch: Partial<Pick<ChecklistItem, "title" | "description" | "category" | "articleContent" | "type" | "visibility">>): Promise<ChecklistItem | null> {
   const items = await getChecklist(productId);
   const idx = items.findIndex((i) => i.id === itemId);
   if (idx === -1) return null;
