@@ -164,7 +164,7 @@ function ProductForm({
 
   return (
     <div className="bg-white rounded-xl border border-blue-200 p-5 space-y-4">
-      <h3 className="font-medium text-gray-900 text-sm">{isNew ? "New Product" : "Edit Product"}</h3>
+      <h3 className="font-medium text-gray-900 text-sm">{isNew ? "New Topic" : "Edit Topic"}</h3>
 
       <div className="grid grid-cols-2 gap-3">
         <input
@@ -235,7 +235,7 @@ function ProductForm({
           disabled={saving || !f.name || !f.slug}
           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors"
         >
-          {saving ? "Saving…" : isNew ? "Add Product" : "Save Changes"}
+          {saving ? "Saving…" : isNew ? "Add Topic" : "Save Changes"}
         </button>
         <button
           onClick={onCancel}
@@ -323,7 +323,7 @@ export default function AdminProductsPage() {
           <div className="flex items-center gap-3">
             <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900">Products</span>
+            <span className="font-semibold text-gray-900">Topics</span>
           </div>
           {user && <UserMenu user={user} />}
         </div>
@@ -331,12 +331,12 @@ export default function AdminProductsPage() {
 
       <main className="max-w-2xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900">Products</h2>
+          <h2 className="font-semibold text-gray-900">Topics</h2>
           <button
             onClick={() => { setShowAdd(true); setEditingId(null); }}
             className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-1.5 transition-colors"
           >
-            + Add Product
+            + Add Topic
           </button>
         </div>
 

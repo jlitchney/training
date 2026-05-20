@@ -43,8 +43,8 @@ export default function AdminPage() {
             className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm hover:border-gray-300 transition-all"
           >
             <div className="text-3xl mb-3">📦</div>
-            <h2 className="font-semibold text-gray-900 mb-1">Products</h2>
-            <p className="text-sm text-gray-500">Manage products, descriptions, and recording checklists.</p>
+            <h2 className="font-semibold text-gray-900 mb-1">Topics</h2>
+            <p className="text-sm text-gray-500">Manage topics, descriptions, and recording checklists.</p>
           </Link>
           <Link
             href="/admin/users"

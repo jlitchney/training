@@ -104,8 +104,8 @@ export default function StudioPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Choose a product to record</h1>
-          <p className="text-sm text-gray-500">Select a product to see its recording checklist and upload videos.</p>
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Choose a topic to record</h1>
+          <p className="text-sm text-gray-500">Select a topic to see its recording checklist and upload videos.</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
