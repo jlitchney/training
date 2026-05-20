@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAllUsers, createUser } from "@/lib/users";
-import bcrypt from "bcryptjs";
 
 export async function GET() {
   const session = await getSession();
@@ -19,15 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const body = await req.json();
-  const { email, name, password, role } = body;
-  if (!email || !name || !password) {
+  const { email, name, role } = body;
+  if (!email || !name) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-  const passwordHash = await bcrypt.hash(password, 10);
   await createUser({
     email: email.toLowerCase(),
     name,
-    passwordHash,
+    passwordHash: "",
     role: role ?? "staff",
     active: true,
     createdAt: new Date().toISOString(),
