@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
+import { renderIconColored } from "@/lib/renderIcon";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
 interface EmbeddedVideo { id: string; title: string; published: boolean; }
@@ -144,7 +145,7 @@ export default function StudioProductPage() {
           <div className="flex items-center gap-3">
             <Link href="/studio" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Recording Studio</Link>
             <span className="text-gray-300">/</span>
-            <span className="font-semibold text-gray-900 text-sm">{product?.emoji} {product?.name}</span>
+            <span className="font-semibold text-gray-900 text-sm inline-flex items-center gap-1.5">{product ? renderIconColored(product.emoji, "w-4 h-4 flex-shrink-0") : null} {product?.name}</span>
           </div>
           {user && <UserMenu user={user} />}
         </div>
