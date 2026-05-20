@@ -47,6 +47,18 @@ export interface ChecklistItem {
 
 const PRODUCTS_KEY = "training:products:v1";
 const FOLDERS_KEY = "training:folders:v1";
+
+export interface CatFolder {
+  id: string;
+  name: string;
+  order: number;
+}
+
+export interface CategoryMeta {
+  order: string[];                       // ordered category names
+  folders: CatFolder[];                  // category folder definitions
+  folderAssignment: Record<string, string>; // category name → folder id
+}
 const hasKV = () =>
   !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
@@ -55,6 +67,7 @@ let memProducts: Product[] = [];
 let memVideos: Record<string, Video[]> = {};
 let memChecklist: Record<string, ChecklistItem[]> = {};
 let memFolders: Folder[] = [];
+let memCatMeta: Record<string, CategoryMeta> = {};
 
 // ── Default seed data ───────────────────────────────────────────────
 const DEFAULT_PRODUCTS: Product[] = [
@@ -192,6 +205,24 @@ export async function deleteFolder(id: string): Promise<void> {
   if (dirty.length > 0) {
     await saveProducts(products.map((p) => p.folderId === id ? { ...p, folderId: undefined } : p));
   }
+}
+
+// ── Category metadata (order + folders) ─────────────────────────────
+function catMetaKey(slug: string) { return `training:catmeta:${slug}`; }
+const EMPTY_CAT_META: CategoryMeta = { order: [], folders: [], folderAssignment: {} };
+
+export async function getCategoryMeta(slug: string): Promise<CategoryMeta> {
+  if (!hasKV()) return memCatMeta[slug] ?? { ...EMPTY_CAT_META };
+  try {
+    const db = await kv();
+    return (await db.get<CategoryMeta>(catMetaKey(slug))) ?? { ...EMPTY_CAT_META };
+  } catch { return { ...EMPTY_CAT_META }; }
+}
+
+export async function saveCategoryMeta(slug: string, meta: CategoryMeta): Promise<void> {
+  if (!hasKV()) { memCatMeta[slug] = meta; return; }
+  const db = await kv();
+  await db.set(catMetaKey(slug), meta);
 }
 
 // ── Videos ──────────────────────────────────────────────────────────
