@@ -7,7 +7,7 @@ import { upload } from "@vercel/blob/client";
 import { UserMenu } from "@/components/UserMenu";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
-interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; }
+interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; }
 interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; }
 
 const COLOR_BG: Record<string, string> = {
@@ -90,6 +90,32 @@ function captureThumbnailFromBlob(videoBlob: Blob): Promise<Blob | null> {
   });
 }
 
+function captureFrameFromUrl(url: string): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = url;
+    const timer = setTimeout(() => { video.src = ""; resolve(null); }, 10000);
+    video.addEventListener("loadedmetadata", () => {
+      video.currentTime = Math.min(2, video.duration * 0.1);
+    });
+    video.addEventListener("seeked", () => {
+      clearTimeout(timer);
+      const w = Math.min(video.videoWidth || 640, 640);
+      const h = video.videoWidth > 0 ? Math.round(w * video.videoHeight / video.videoWidth) : 360;
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { video.src = ""; resolve(null); return; }
+      ctx.drawImage(video, 0, 0, w, h);
+      canvas.toBlob((blob) => { video.src = ""; resolve(blob); }, "image/jpeg", 0.8);
+    });
+    video.addEventListener("error", () => { clearTimeout(timer); video.src = ""; resolve(null); });
+  });
+}
+
 export default function StudioCategoryPage() {
   const { slug, category } = useParams<{ slug: string; category: string }>();
   const decodedCategory = decodeURIComponent(category);
@@ -113,6 +139,7 @@ export default function StudioCategoryPage() {
   const selectedItemRef = useRef<ChecklistItem | null>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const transcriptRef = useRef("");
+  const thumbGenStarted = useRef(false);
 
   const [pendingBlobUrl, setPendingBlobUrl] = useState("");
   const [pendingThumbnailUrl, setPendingThumbnailUrl] = useState<string | undefined>();
@@ -163,6 +190,28 @@ export default function StudioCategoryPage() {
     const covered = categoryItems.find((i) => i.videoId);
     setSelectedItemId((covered ?? categoryItems[0]).id);
   }, [loading, categoryItems, selectedItemId]);
+
+  // Silently generate + save thumbnails for existing videos that don't have one
+  useEffect(() => {
+    if (loading || thumbGenStarted.current) return;
+    const needThumbs = videos.filter((v) => v.blobUrl && !v.thumbnailUrl);
+    if (needThumbs.length === 0) return;
+    thumbGenStarted.current = true;
+    (async () => {
+      for (const video of needThumbs) {
+        const thumbBlob = await captureFrameFromUrl(blobSrc(video.blobUrl));
+        if (!thumbBlob) continue;
+        const result = await uploadBlob(thumbBlob, `thumb-${video.id}-${Date.now()}.jpg`);
+        if (!result) continue;
+        await fetch(`/api/videos/${video.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: slug, thumbnailUrl: result.url }),
+        });
+        setVideos((prev) => prev.map((v) => v.id === video.id ? { ...v, thumbnailUrl: result.url } : v));
+      }
+    })();
+  }, [loading, videos, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allCategoryNames = useMemo(() => {
     const set = new Set<string>();
