@@ -11,7 +11,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  useDroppable,
   DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -108,11 +107,12 @@ function SortableCard({
       {onRemoveFromFolder && (
         <button
           onClick={onRemoveFromFolder}
-          className="absolute top-2.5 left-2.5 z-10 p-1 rounded-md text-gray-300 opacity-0 group-hover/drag:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
+          className="absolute top-2.5 left-2.5 z-10 p-1.5 rounded-md text-gray-300 opacity-0 group-hover/drag:opacity-100 transition-opacity hover:text-amber-600 hover:bg-amber-50"
           title="Remove from folder"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+            <line x1="4" y1="4" x2="20" y2="20" strokeLinecap="round" strokeWidth={1.75} />
           </svg>
         </button>
       )}
@@ -310,33 +310,6 @@ function PlainCard({ product, videos }: { product: Product; videos: Video[] }) {
   );
 }
 
-// ── Droppable "Move to" chip (used in folder view) ──────────────────
-function DroppableMoveTarget({ id, label, isFolder }: { id: string; label: string; isFolder?: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all select-none ${
-        isOver
-          ? "border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-200 shadow-sm"
-          : "border-gray-200 bg-white text-gray-500"
-      }`}
-    >
-      {isFolder ? (
-        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-        </svg>
-      ) : (
-        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-        </svg>
-      )}
-      {label}
-      {isOver && <span className="ml-0.5">↓</span>}
-    </div>
-  );
-}
-
 // ── Main page ───────────────────────────────────────────────────────
 export default function StudioPage() {
   const router = useRouter();
@@ -485,19 +458,7 @@ export default function StudioPage() {
         });
         return prev.map((p) => p.id === aId ? { ...p, folderId } : p);
       });
-    } else if (!aId.startsWith("folder:") && oId === "uncategorized") {
-      // Remove from folder
-      setProducts((prev) => {
-        const product = prev.find((p) => p.id === aId);
-        if (!product || !product.folderId) return prev;
-        fetch(`/api/products/${product.slug}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folderId: null }),
-        });
-        return prev.map((p) => p.id === aId ? { ...p, folderId: undefined } : p);
-      });
-    } else if (!aId.startsWith("folder:") && !oId.startsWith("folder:") && oId !== "uncategorized") {
+    } else if (!aId.startsWith("folder:") && !oId.startsWith("folder:")) {
       // Reorder topics within current view
       setProducts((prev) => {
         const viewList = openFolderId
@@ -653,17 +614,6 @@ export default function StudioPage() {
           >
             {/* ── Folder view ── */}
             {openFolder ? (
-              <>
-                {/* Move-to strip: always visible in folder view */}
-                {(folders.length > 1 || folderTopics.length > 0) && (
-                  <div className="flex items-center gap-2 mb-5 flex-wrap">
-                    <span className="text-xs text-gray-400 flex-shrink-0">Move topic to:</span>
-                    <DroppableMoveTarget id="uncategorized" label="Uncategorized" />
-                    {folders.filter((f) => f.id !== openFolderId).map((f) => (
-                      <DroppableMoveTarget key={f.id} id={`folder:${f.id}`} label={f.name} isFolder />
-                    ))}
-                  </div>
-                )}
               <SortableContext items={folderTopics.map((p) => p.id)} strategy={rectSortingStrategy}>
                 {folderTopics.length === 0 ? (
                   <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
@@ -686,7 +636,6 @@ export default function StudioPage() {
                   </div>
                 )}
               </SortableContext>
-              </>
             ) : (
               /* ── Root view ── */
               <div className="space-y-8">
