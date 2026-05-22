@@ -12,9 +12,26 @@ interface ContentItem {
   description?: string;
   category?: string;
   videoId?: string;
-  video?: { id: string; thumbnailUrl?: string };
+  video?: { id: string; thumbnailUrl?: string; publishedAt?: string; contentUpdatedAt?: string };
   type?: "video" | "article";
   articleContent?: string;
+  publishedAt?: string;
+  contentUpdatedAt?: string;
+}
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+function contentBadge(ci: ContentItem): "new" | "updated" | null {
+  const cutoff = Date.now() - THIRTY_DAYS;
+  const isArticle = ci.type === "article";
+  const pub = isArticle ? ci.publishedAt : ci.video?.publishedAt;
+  const upd = isArticle ? ci.contentUpdatedAt : ci.video?.contentUpdatedAt;
+  if (!pub) return null;
+  const pubMs = +new Date(pub);
+  const updMs = upd ? +new Date(upd) : 0;
+  if (updMs > pubMs + 86_400_000 && updMs > cutoff) return "updated";
+  if (pubMs > cutoff) return "new";
+  return null;
 }
 interface SelectedContent {
   productSlug: string;
@@ -82,6 +99,7 @@ export default function SocialPostsPage() {
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [productItems, setProductItems] = useState<Record<string, ContentItem[]>>({});
   const [loadingItemsFor, setLoadingItemsFor] = useState<string | null>(null);
+  const [recentOnly, setRecentOnly] = useState(false);
 
   const [selected, setSelected] = useState<SelectedContent | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -204,7 +222,18 @@ export default function SocialPostsPage() {
 
           {/* Left: content picker */}
           <div className="w-64 flex-shrink-0">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Pick Content</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pick Content</p>
+              <button
+                onClick={() => setRecentOnly((v) => !v)}
+                className={`flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 transition-colors ${
+                  recentOnly ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                Recent
+              </button>
+            </div>
             <div className="space-y-1.5">
               {products.map((product) => {
                 const items = productItems[product.id] ?? [];
@@ -231,22 +260,29 @@ export default function SocialPostsPage() {
                         ) : items.length === 0 ? (
                           <p className="text-xs text-gray-400 px-3 py-2.5">No content yet.</p>
                         ) : (
-                          items.map((item) => (
-                            <button
-                              key={item.id}
-                              onClick={() => selectItem(product, item)}
-                              className={`w-full text-left px-3 py-2 text-xs border-b border-gray-50 last:border-0 transition-colors flex items-start gap-2 ${
-                                selected?.itemId === item.id
-                                  ? "bg-blue-50 text-blue-700"
-                                  : "text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              <span className={`mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full ${
-                                item.type === "article" ? "bg-green-400" : "bg-blue-400"
-                              }`} />
-                              <span className="leading-tight">{item.title}</span>
-                            </button>
-                          ))
+                          items
+                            .filter((item) => !recentOnly || contentBadge(item) !== null)
+                            .map((item) => {
+                              const badge = contentBadge(item);
+                              return (
+                                <button
+                                  key={item.id}
+                                  onClick={() => selectItem(product, item)}
+                                  className={`w-full text-left px-3 py-2 text-xs border-b border-gray-50 last:border-0 transition-colors flex items-start gap-2 ${
+                                    selected?.itemId === item.id
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  <span className={`mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full ${
+                                    item.type === "article" ? "bg-green-400" : "bg-blue-400"
+                                  }`} />
+                                  <span className="leading-tight flex-1">{item.title}</span>
+                                  {badge === "new" && <span className="flex-shrink-0 font-semibold px-1 rounded bg-emerald-100 text-emerald-700">New</span>}
+                                  {badge === "updated" && <span className="flex-shrink-0 font-semibold px-1 rounded bg-amber-100 text-amber-700">Upd</span>}
+                                </button>
+                              );
+                            })
                         )}
                       </div>
                     )}

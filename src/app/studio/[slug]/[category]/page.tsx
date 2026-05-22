@@ -13,8 +13,22 @@ import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } 
 import { CSS } from "@dnd-kit/utilities";
 
 interface Product { id: string; name: string; slug: string; color: string; emoji: string; visibility?: 'public' | 'internal'; categoryVisibility?: Record<string, 'public' | 'internal'>; }
-interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; }
-interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; type?: "video" | "article"; articleContent?: string; visibility?: "public" | "internal"; }
+interface Video { id: string; title: string; description: string; blobUrl: string; published: boolean; recordedBy: string; recordedAt: string; duration?: number; visibility?: 'public' | 'internal'; thumbnailUrl?: string; publishedAt?: string; contentUpdatedAt?: string; }
+interface ChecklistItem { id: string; title: string; description?: string; category?: string; videoId?: string; video?: Video; order: number; type?: "video" | "article"; articleContent?: string; visibility?: "public" | "internal"; publishedAt?: string; contentUpdatedAt?: string; }
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+function contentBadge(item: ChecklistItem): "new" | "updated" | null {
+  const cutoff = Date.now() - THIRTY_DAYS;
+  const isArticle = item.type === "article";
+  const pub = isArticle ? item.publishedAt : item.video?.publishedAt;
+  const upd = isArticle ? item.contentUpdatedAt : item.video?.contentUpdatedAt;
+  if (!pub) return null;
+  const pubMs = +new Date(pub);
+  const updMs = upd ? +new Date(upd) : 0;
+  if (updMs > pubMs + 86_400_000 && updMs > cutoff) return "updated";
+  if (pubMs > cutoff) return "new";
+  return null;
+}
 
 const COLOR_BG: Record<string, string> = {
   blue: "bg-blue-600", indigo: "bg-indigo-600", violet: "bg-violet-600",
@@ -144,6 +158,7 @@ function SortableSidebarItem({
   const isPublished = isArticle ? isDone : isDone && item.video?.published === true;
   const isDraft = !isArticle && isDone && !isPublished;
   const icon = isDone ? "✅" : isDraft ? "🟡" : null;
+  const badge = isPublished ? contentBadge(item) : null;
 
   return (
     <div
@@ -198,7 +213,13 @@ function SortableSidebarItem({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             )}
-            <span className="leading-snug">{item.title}</span>
+            <span className="leading-snug flex-1">{item.title}</span>
+            {badge === "new" && (
+              <span className={`flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"}`}>New</span>
+            )}
+            {badge === "updated" && (
+              <span className={`flex-shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>Upd</span>
+            )}
           </button>
           <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover/item:opacity-100 transition-opacity`}>
             <button

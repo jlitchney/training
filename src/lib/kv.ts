@@ -32,6 +32,8 @@ export interface Video {
   tags?: string[];
   visibility?: 'public' | 'internal';
   thumbnailUrl?: string;
+  publishedAt?: string;     // ISO date when first published
+  contentUpdatedAt?: string; // ISO date when video file was replaced post-publish
 }
 
 export interface ChecklistItem {
@@ -46,6 +48,8 @@ export interface ChecklistItem {
   type?: "video" | "article"; // defaults to "video" when absent
   articleContent?: string;    // rich-text HTML for article items
   visibility?: "public" | "internal"; // item-level visibility (articles)
+  publishedAt?: string;       // articles: ISO date when content was first saved
+  contentUpdatedAt?: string;  // articles: ISO date when content was meaningfully updated
 }
 
 const PRODUCTS_KEY = "training:products:v1";
@@ -304,6 +308,20 @@ export async function createVideo(video: Omit<Video, "id" | "recordedAt">): Prom
   return newVideo;
 }
 
+function applyVideoTimestamps(existing: Video, patch: Partial<Video>): Partial<Video> {
+  const now = new Date().toISOString();
+  const result = { ...patch };
+  // Set publishedAt the first time a video is published
+  if (patch.published === true && !existing.published && !existing.publishedAt) {
+    result.publishedAt = now;
+  }
+  // Set contentUpdatedAt when the video file is replaced after initial publish
+  if (patch.blobUrl !== undefined && patch.blobUrl !== existing.blobUrl && existing.publishedAt) {
+    result.contentUpdatedAt = now;
+  }
+  return result;
+}
+
 export async function updateVideo(productId: string, videoId: string, patch: Partial<Video>): Promise<Video | null> {
   if (!hasKV()) {
     const videos = memVideos[productId] ?? [];
@@ -313,6 +331,7 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
     const checklistItem = items.find((i) => i.video?.id === videoId || i.videoId === videoId);
     const existing = videos[idx] ?? checklistItem?.video ?? null;
     if (!existing) return null;
+    patch = applyVideoTimestamps(existing, patch);
     const updated = { ...existing, ...patch };
     if (idx !== -1) videos[idx] = updated;
     // Update embedded video in checklist
@@ -333,6 +352,7 @@ export async function updateVideo(productId: string, videoId: string, patch: Par
   }
   if (!existing) return null;
 
+  patch = applyVideoTimestamps(existing, patch);
   const updated = { ...existing, ...patch };
 
   // Write individual key for backward compat
@@ -415,7 +435,7 @@ export async function addChecklistItem(productId: string, title: string, descrip
   return newItem;
 }
 
-export async function updateChecklistItem(productId: string, itemId: string, patch: Partial<Pick<ChecklistItem, "title" | "description" | "category" | "articleContent" | "type" | "visibility">>): Promise<ChecklistItem | null> {
+export async function updateChecklistItem(productId: string, itemId: string, patch: Partial<Pick<ChecklistItem, "title" | "description" | "category" | "articleContent" | "type" | "visibility" | "publishedAt" | "contentUpdatedAt">>): Promise<ChecklistItem | null> {
   const items = await getChecklist(productId);
   const idx = items.findIndex((i) => i.id === itemId);
   if (idx === -1) return null;

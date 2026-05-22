@@ -41,6 +41,22 @@ export async function POST(req: NextRequest) {
       ...(body.articleContent !== undefined && { articleContent: body.articleContent }),
       ...(body.visibility !== undefined && { visibility: body.visibility }),
     };
+    // Auto-set article timestamps when content is saved
+    if (body.articleContent !== undefined) {
+      const currentItems = await getChecklist(body.productId);
+      const currentItem = currentItems.find((i) => i.id === body.itemId);
+      if (currentItem) {
+        const now = new Date().toISOString();
+        const hadContent = !!currentItem.articleContent?.trim();
+        const hasContent = !!body.articleContent?.trim();
+        if (!hadContent && hasContent) {
+          patch.publishedAt = now;
+          patch.contentUpdatedAt = now;
+        } else if (hadContent && hasContent && body.articleContent !== currentItem.articleContent) {
+          patch.contentUpdatedAt = now;
+        }
+      }
+    }
     const item = await updateChecklistItem(body.productId, body.itemId, patch);
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(item);

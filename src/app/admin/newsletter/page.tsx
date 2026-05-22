@@ -66,9 +66,26 @@ interface ChecklistItem {
   description?: string;
   category?: string;
   videoId?: string;
-  video?: { id: string; thumbnailUrl?: string };
+  video?: { id: string; thumbnailUrl?: string; publishedAt?: string; contentUpdatedAt?: string };
   type?: "video" | "article";
   articleContent?: string;
+  publishedAt?: string;
+  contentUpdatedAt?: string;
+}
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+function contentBadge(ci: ChecklistItem): "new" | "updated" | null {
+  const cutoff = Date.now() - THIRTY_DAYS;
+  const isArticle = ci.type === "article";
+  const pub = isArticle ? ci.publishedAt : ci.video?.publishedAt;
+  const upd = isArticle ? ci.contentUpdatedAt : ci.video?.contentUpdatedAt;
+  if (!pub) return null;
+  const pubMs = +new Date(pub);
+  const updMs = upd ? +new Date(upd) : 0;
+  if (updMs > pubMs + 86_400_000 && updMs > cutoff) return "updated";
+  if (pubMs > cutoff) return "new";
+  return null;
 }
 
 const COLOR_CLASSES: Record<string, { badge: string }> = {
@@ -102,6 +119,7 @@ function ContentPickerModal({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [recentOnly, setRecentOnly] = useState(false);
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
@@ -142,22 +160,41 @@ function ContentPickerModal({
     onClose();
   }
 
-  const grouped = checklistItems.reduce<Record<string, ChecklistItem[]>>((acc, ci) => {
+  const visibleItems = recentOnly
+    ? checklistItems.filter((ci) => contentBadge(ci) !== null)
+    : checklistItems;
+
+  const grouped = visibleItems.reduce<Record<string, ChecklistItem[]>>((acc, ci) => {
     const cat = ci.category ?? "Uncategorized";
     (acc[cat] ??= []).push(ci);
     return acc;
   }, {});
+
+  const recentCount = checklistItems.filter((ci) => contentBadge(ci) !== null).length;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <h2 className="font-bold text-gray-900">Add Content</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedProduct && recentCount > 0 && (
+              <button
+                onClick={() => setRecentOnly((v) => !v)}
+                className={`flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1 transition-colors ${
+                  recentOnly ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                Recent ({recentCount})
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
           {!selectedProduct ? (
@@ -204,21 +241,26 @@ function ContentPickerModal({
                 <div key={cat} className="mb-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{cat}</p>
                   <div className="space-y-1">
-                    {items.map((ci) => (
+                    {items.map((ci) => {
+                      const badge = contentBadge(ci);
+                      return (
                       <button
                         key={ci.id}
                         onClick={() => addItem(ci)}
                         className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-100 hover:border-blue-400 hover:bg-blue-50 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {ci.type === "article"
                             ? <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700">Article</span>
                             : <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Video</span>
                           }
+                          {badge === "new" && <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">New</span>}
+                          {badge === "updated" && <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Updated</span>}
                           <span className="text-sm text-gray-900">{ci.title}</span>
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
