@@ -64,10 +64,16 @@ function buildEmail({
   const categoryUrl = `${origin}/${product.slug}/${encodeURIComponent(category)}`;
   const productUrl = `${origin}/${product.slug}`;
 
-  const thumbCellHtml = video.thumbnailUrl ? `
+  const thumbSrc = video.thumbnailUrl
+    ? (video.thumbnailUrl.includes(".blob.vercel-storage.com")
+        ? `${origin}/api/blob?url=${encodeURIComponent(video.thumbnailUrl)}`
+        : video.thumbnailUrl)
+    : null;
+
+  const thumbCellHtml = thumbSrc ? `
     <td width="150" style="padding:16px 0 16px 18px;vertical-align:top;">
       <a href="${videoUrl}" style="display:block;text-decoration:none;">
-        <img src="${video.thumbnailUrl}" alt="${video.title.replace(/"/g, "&quot;")}" width="150" height="84"
+        <img src="${thumbSrc}" alt="${video.title.replace(/"/g, "&quot;")}" width="150" height="84"
           style="display:block;border-radius:8px;object-fit:cover;border:1px solid #e5e7eb;" />
       </a>
     </td>

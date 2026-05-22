@@ -395,28 +395,23 @@ export default function SocialPostsPage() {
                     {/* Image panel */}
                     {selected.thumbnailUrl && (
                       <div className="border-b border-gray-100 p-4 flex items-center gap-4 bg-gray-50">
-                        <div className="relative flex-shrink-0">
+                        <div className="flex-shrink-0">
                           <img
-                            src={selected.thumbnailUrl}
+                            src={selected.thumbnailUrl.includes(".blob.vercel-storage.com")
+                              ? `/api/blob?url=${encodeURIComponent(selected.thumbnailUrl)}`
+                              : selected.thumbnailUrl}
                             alt={selected.title}
                             className="w-32 h-20 object-cover rounded-lg border border-gray-200"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
-                          </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-gray-700 mb-0.5">Post image</p>
                           <p className="text-xs text-gray-500 mb-2">Save this thumbnail to attach when publishing each post.</p>
                           <a
-                            href={selected.thumbnailUrl}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href={selected.thumbnailUrl.includes(".blob.vercel-storage.com")
+                              ? `/api/blob?url=${encodeURIComponent(selected.thumbnailUrl)}`
+                              : selected.thumbnailUrl}
+                            download="thumbnail.jpg"
                             className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

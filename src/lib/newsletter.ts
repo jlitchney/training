@@ -120,17 +120,23 @@ function itemCard(item: NewsletterItem, origin: string): string {
   const desc = (item.description || item.articleContent || "")
     .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
 
-  const thumbHtml = isVideo && item.thumbnailUrl ? `
+  const thumbSrc = item.thumbnailUrl
+    ? (item.thumbnailUrl.includes(".blob.vercel-storage.com")
+        ? `${origin}/api/blob?url=${encodeURIComponent(item.thumbnailUrl)}`
+        : item.thumbnailUrl)
+    : null;
+
+  const thumbHtml = isVideo && thumbSrc ? `
     <td width="130" style="padding:14px 0 14px 16px;vertical-align:top;">
       <a href="${url}" style="display:block;text-decoration:none;">
-        <img src="${item.thumbnailUrl}" alt="${item.title.replace(/"/g, "&quot;")}" width="130" height="73"
+        <img src="${thumbSrc}" alt="${item.title.replace(/"/g, "&quot;")}" width="130" height="73"
           style="display:block;border-radius:7px;object-fit:cover;border:1px solid #e5e7eb;" />
       </a>
     </td>
     <td style="width:10px;font-size:0;line-height:0;padding:0;">&nbsp;</td>
   ` : "";
 
-  const contentPad = isVideo && item.thumbnailUrl ? "14px 16px 14px 0" : "16px 18px";
+  const contentPad = isVideo && thumbSrc ? "14px 16px 14px 0" : "16px 18px";
 
   return `
     <tr><td style="padding:0 0 16px 0;">
