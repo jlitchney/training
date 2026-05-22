@@ -60,6 +60,63 @@ function formatDuration(seconds?: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function SubscribeWidget() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setStatus("loading");
+    try {
+      const r = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setStatus(r.ok ? "success" : "error");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="border-t border-gray-200 bg-white">
+      <div className="max-w-lg mx-auto px-6 py-12 text-center">
+        <div className="flex justify-center mb-3">
+          <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Stay in the loop</h2>
+        <p className="text-sm text-gray-500 mb-5">Get notified when new training videos and guides are published.</p>
+        {status === "success" ? (
+          <p className="text-sm font-medium text-green-600">You&rsquo;re subscribed!</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex gap-2 max-w-sm mx-auto">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+            >
+              {status === "loading" ? "…" : "Subscribe"}
+            </button>
+          </form>
+        )}
+        {status === "error" && <p className="text-xs text-red-500 mt-2">Something went wrong. Please try again.</p>}
+      </div>
+    </div>
+  );
+}
+
 function ProductCard({ product, videos }: { product: Product; videos: Video[] }) {
   const c = colorFor(product.color);
   return (
@@ -347,6 +404,8 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {!session?.user && <SubscribeWidget />}
     </div>
   );
 }
