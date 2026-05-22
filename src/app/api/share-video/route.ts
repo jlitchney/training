@@ -66,14 +66,9 @@ function buildEmail({
 
   const thumbnailHtml = video.thumbnailUrl ? `
     <tr><td style="padding:0;line-height:0;font-size:0;">
-      <a href="${videoUrl}" style="display:block;text-decoration:none;position:relative;">
+      <a href="${videoUrl}" style="display:block;text-decoration:none;">
         <img src="${video.thumbnailUrl}" alt="${video.title.replace(/"/g, "&quot;")}" width="560"
           style="width:100%;max-width:560px;height:auto;display:block;" />
-        <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;">
-          <div style="width:64px;height:64px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center;">
-            <div style="width:0;height:0;border-style:solid;border-width:13px 0 13px 24px;border-color:transparent transparent transparent #ffffff;margin-left:6px;"></div>
-          </div>
-        </div>
       </a>
     </td></tr>
     <tr><td style="background:${col.bg};height:4px;font-size:0;line-height:0;padding:0;">&nbsp;</td></tr>
