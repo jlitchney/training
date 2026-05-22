@@ -113,35 +113,51 @@ function c(color: string) { return COLOR_HEX[color] ?? COLOR_HEX.blue; }
 function itemCard(item: NewsletterItem, origin: string): string {
   const col = c(item.productColor);
   const isVideo = item.type === "video";
-  const icon = isVideo ? "&#9654;" : "&#128196;";
   const url = isVideo
     ? `${origin}/${item.productSlug}/${item.contentId}`
     : `${origin}/${item.productSlug}/${encodeURIComponent(item.category ?? "")}`;
   const ctaLabel = isVideo ? "Watch Video &rarr;" : "Read Article &rarr;";
-  const desc = item.description
-    ? item.description.replace(/<[^>]*>/g, " ").trim().slice(0, 200)
-    : (item.articleContent ? item.articleContent.replace(/<[^>]*>/g, " ").trim().slice(0, 200) : "");
+  const desc = (item.description || item.articleContent || "")
+    .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
+
+  // Video with thumbnail: show the actual image with a play button overlay
+  const headerHtml = isVideo && item.thumbnailUrl ? `
+    <tr><td style="padding:0;line-height:0;font-size:0;">
+      <a href="${url}" style="display:block;text-decoration:none;position:relative;">
+        <img src="${item.thumbnailUrl}" alt="${item.title.replace(/"/g, "&quot;")}" width="560"
+          style="width:100%;max-width:560px;height:auto;display:block;" />
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;">
+          <div style="width:60px;height:60px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+            <div style="width:0;height:0;border-style:solid;border-width:12px 0 12px 22px;border-color:transparent transparent transparent #ffffff;margin-left:5px;"></div>
+          </div>
+        </div>
+      </a>
+    </td></tr>
+    <tr><td style="background:${col.bg};height:4px;font-size:0;line-height:0;padding:0;">&nbsp;</td></tr>
+  ` : `
+    <tr><td style="background:${col.bg};padding:24px 24px 20px 24px;text-align:center;">
+      <div style="display:inline-block;width:52px;height:52px;background:rgba(255,255,255,0.22);border-radius:50%;line-height:52px;text-align:center;font-size:22px;color:#ffffff;">
+        ${isVideo ? "&#9654;" : "&#128196;"}
+      </div>
+    </td></tr>
+  `;
 
   return `
     <tr><td style="padding:0 0 20px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden;">
-        <tr><td style="background:${col.bg};padding:28px;text-align:center;">
-          <div style="display:inline-block;width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:50%;line-height:52px;text-align:center;font-size:22px;color:white;">
-            ${icon}
-          </div>
-        </td></tr>
-        <tr><td style="padding:20px 24px 24px 24px;">
-          <div style="margin-bottom:12px;">
-            <span style="display:inline-block;background:${col.light};color:${col.text};font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
+        ${headerHtml}
+        <tr><td style="padding:18px 22px 22px 22px;">
+          <div style="margin-bottom:10px;">
+            <span style="display:inline-block;background:${col.light};color:${col.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.01em;">
               ${item.productName}
             </span>
-            ${item.category ? `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;margin-left:6px;">${item.category}</span>` : ""}
+            ${item.category ? `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;margin-left:5px;">${item.category}</span>` : ""}
           </div>
-          <h2 style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#111827;line-height:1.3;">
+          <h2 style="margin:0 0 7px 0;font-size:17px;font-weight:700;color:#111827;line-height:1.35;">
             ${item.title}
           </h2>
-          ${desc ? `<p style="margin:0 0 18px 0;font-size:14px;color:#6b7280;line-height:1.6;">${desc}${desc.length >= 200 ? "…" : ""}</p>` : `<div style="margin-bottom:18px;"></div>`}
-          <a href="${url}" style="display:inline-block;background:${col.bg};color:#ffffff;font-size:14px;font-weight:600;padding:11px 22px;border-radius:10px;text-decoration:none;">
+          ${desc ? `<p style="margin:0 0 16px 0;font-size:14px;color:#6b7280;line-height:1.65;">${desc}${desc.length >= 180 ? "…" : ""}</p>` : `<div style="margin-bottom:16px;"></div>`}
+          <a href="${url}" style="display:inline-block;background:${col.bg};color:#ffffff;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;letter-spacing:0.01em;">
             ${ctaLabel}
           </a>
         </td></tr>
@@ -173,26 +189,35 @@ export function buildNewsletterEmail({
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${subject}</title>
+</head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
   <tr><td align="center">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
 
-      <tr><td style="padding:0 0 24px 0;">
-        <p style="margin:0 0 2px 0;font-size:20px;font-weight:800;color:#111827;letter-spacing:-0.01em;">All-Star Training</p>
-        <p style="margin:0;font-size:13px;color:#9ca3af;">Video Knowledge Base &amp; Guides</p>
+      <!-- Header -->
+      <tr><td style="padding:0 0 20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:14px;overflow:hidden;">
+          <tr><td style="padding:20px 24px;">
+            <p style="margin:0 0 2px 0;font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.01em;">All-Star Training</p>
+            <p style="margin:0;font-size:12px;color:#9ca3af;">Video Knowledge Base &amp; Guides</p>
+          </td></tr>
+        </table>
       </td></tr>
 
       ${introHtml}
 
       ${items.map((item) => itemCard(item, origin)).join("")}
 
+      <!-- Footer -->
       <tr><td style="padding:8px 0 0 0;text-align:center;border-top:1px solid #e5e7eb;">
-        <p style="margin:12px 0 6px 0;font-size:12px;color:#9ca3af;line-height:1.5;">
+        <p style="margin:16px 0 4px 0;font-size:12px;color:#9ca3af;line-height:1.5;">
           You&rsquo;re receiving this because you subscribed to All-Star Training updates.
         </p>
         <a href="${unsubUrl}" style="font-size:12px;color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+        <p style="margin:12px 0 0 0;font-size:11px;color:#d1d5db;">All-Star Talent &middot; training.allstartalent.us</p>
       </td></tr>
 
     </table>
