@@ -129,14 +129,32 @@ export default function SocialPostsPage() {
     if (!productItems[product.id]) {
       setLoadingItemsFor(product.id);
       try {
-        const r = await fetch(`/api/checklist?productId=${product.id}`);
-        const items: ContentItem[] = await r.json();
-        setProductItems((prev) => ({
-          ...prev,
-          [product.id]: items.filter((i) =>
-            (i.type === "article" && i.articleContent?.trim()) || i.videoId || i.video?.id
-          ),
-        }));
+        const [checklistRes, videosRes] = await Promise.all([
+          fetch(`/api/checklist?productId=${product.id}`),
+          fetch(`/api/videos?productId=${product.id}`),
+        ]);
+        const items: ContentItem[] = await checklistRes.json();
+        const videos: { id: string; thumbnailUrl?: string }[] = videosRes.ok ? await videosRes.json() : [];
+        const videoById = new Map(videos.map((v) => [v.id, v]));
+
+        const merged = items
+          .filter((i) => (i.type === "article" && i.articleContent?.trim()) || i.videoId || i.video?.id)
+          .map((i) => {
+            const vid = i.video?.id ?? i.videoId;
+            if (!vid) return i;
+            const fullVideo = videoById.get(vid);
+            if (!fullVideo) return i;
+            return {
+              ...i,
+              video: {
+                ...i.video,
+                id: vid,
+                thumbnailUrl: i.video?.thumbnailUrl ?? fullVideo.thumbnailUrl,
+              },
+            };
+          });
+
+        setProductItems((prev) => ({ ...prev, [product.id]: merged }));
       } finally {
         setLoadingItemsFor(null);
       }
