@@ -120,42 +120,39 @@ function itemCard(item: NewsletterItem, origin: string): string {
   const desc = (item.description || item.articleContent || "")
     .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 180);
 
-  // Video with thumbnail: full-width linked image (no overlay — CSS position/flex breaks email clients)
-  const headerHtml = isVideo && item.thumbnailUrl ? `
-    <tr><td style="padding:0;line-height:0;font-size:0;">
+  const thumbHtml = isVideo && item.thumbnailUrl ? `
+    <td width="130" style="padding:14px 0 14px 16px;vertical-align:top;">
       <a href="${url}" style="display:block;text-decoration:none;">
-        <img src="${item.thumbnailUrl}" alt="${item.title.replace(/"/g, "&quot;")}" width="560"
-          style="width:100%;max-width:560px;height:auto;display:block;" />
+        <img src="${item.thumbnailUrl}" alt="${item.title.replace(/"/g, "&quot;")}" width="130" height="73"
+          style="display:block;border-radius:7px;object-fit:cover;border:1px solid #e5e7eb;" />
       </a>
-    </td></tr>
-    <tr><td style="background:${col.bg};height:4px;font-size:0;line-height:0;padding:0;">&nbsp;</td></tr>
-  ` : `
-    <tr><td style="background:${col.bg};padding:24px 24px 20px 24px;text-align:center;">
-      <div style="display:inline-block;width:52px;height:52px;background:rgba(255,255,255,0.22);border-radius:50%;line-height:52px;text-align:center;font-size:22px;color:#ffffff;">
-        ${isVideo ? "&#9654;" : "&#128196;"}
-      </div>
-    </td></tr>
-  `;
+    </td>
+    <td style="width:10px;font-size:0;line-height:0;padding:0;">&nbsp;</td>
+  ` : "";
+
+  const contentPad = isVideo && item.thumbnailUrl ? "14px 16px 14px 0" : "16px 18px";
 
   return `
-    <tr><td style="padding:0 0 20px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
-        ${headerHtml}
-        <tr><td style="padding:18px 22px 22px 22px;">
-          <div style="margin-bottom:10px;">
-            <span style="display:inline-block;background:${col.light};color:${col.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.01em;">
-              ${item.productName}
-            </span>
-            ${item.category ? `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;margin-left:5px;">${item.category}</span>` : ""}
-          </div>
-          <h2 style="margin:0 0 7px 0;font-size:17px;font-weight:700;color:#111827;line-height:1.35;">
-            ${item.title}
-          </h2>
-          ${desc ? `<p style="margin:0 0 16px 0;font-size:14px;color:#6b7280;line-height:1.65;">${desc}${desc.length >= 180 ? "…" : ""}</p>` : `<div style="margin-bottom:16px;"></div>`}
-          <a href="${url}" style="display:inline-block;background:${col.bg};color:#ffffff;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;letter-spacing:0.01em;">
-            ${ctaLabel}
-          </a>
-        </td></tr>
+    <tr><td style="padding:0 0 16px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;border-top:3px solid ${col.bg};overflow:hidden;">
+        <tr>
+          ${thumbHtml}
+          <td style="padding:${contentPad};vertical-align:top;">
+            <div style="margin-bottom:8px;">
+              <span style="display:inline-block;background:${col.light};color:${col.text};font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:0.01em;">
+                ${item.productName}
+              </span>
+              ${item.category ? `<span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:4px;">${item.category}</span>` : ""}
+            </div>
+            <p style="margin:0 0 6px 0;font-size:15px;font-weight:700;color:#111827;line-height:1.3;">
+              ${item.title}
+            </p>
+            ${desc ? `<p style="margin:0 0 10px 0;font-size:12px;color:#6b7280;line-height:1.55;">${desc.slice(0, 100)}${desc.length > 100 ? "…" : ""}</p>` : `<div style="margin-bottom:10px;"></div>`}
+            <a href="${url}" style="display:inline-block;background:${col.bg};color:#ffffff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:6px;text-decoration:none;">
+              ${ctaLabel}
+            </a>
+          </td>
+        </tr>
       </table>
     </td></tr>`;
 }

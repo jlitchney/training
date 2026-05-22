@@ -64,20 +64,21 @@ function buildEmail({
   const categoryUrl = `${origin}/${product.slug}/${encodeURIComponent(category)}`;
   const productUrl = `${origin}/${product.slug}`;
 
-  const thumbnailHtml = video.thumbnailUrl ? `
-    <tr><td style="padding:0;line-height:0;font-size:0;">
+  const thumbCellHtml = video.thumbnailUrl ? `
+    <td width="150" style="padding:16px 0 16px 18px;vertical-align:top;">
       <a href="${videoUrl}" style="display:block;text-decoration:none;">
-        <img src="${video.thumbnailUrl}" alt="${video.title.replace(/"/g, "&quot;")}" width="560"
-          style="width:100%;max-width:560px;height:auto;display:block;" />
+        <img src="${video.thumbnailUrl}" alt="${video.title.replace(/"/g, "&quot;")}" width="150" height="84"
+          style="display:block;border-radius:8px;object-fit:cover;border:1px solid #e5e7eb;" />
       </a>
-    </td></tr>
-    <tr><td style="background:${col.bg};height:4px;font-size:0;line-height:0;padding:0;">&nbsp;</td></tr>
+    </td>
+    <td style="width:12px;font-size:0;line-height:0;padding:0;">&nbsp;</td>
   ` : `
-    <tr><td style="background:${col.bg};padding:36px;text-align:center;">
-      <div style="display:inline-block;width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;line-height:60px;text-align:center;font-size:24px;color:white;">
+    <td width="52" style="padding:16px 0 16px 18px;vertical-align:top;">
+      <div style="width:52px;height:52px;background:${col.light};border-radius:50%;line-height:52px;text-align:center;font-size:22px;color:${col.bg};">
         &#9654;
       </div>
-    </td></tr>
+    </td>
+    <td style="width:12px;font-size:0;line-height:0;padding:0;">&nbsp;</td>
   `;
 
   const relatedHtml = relatedVideos.length > 0 ? `
@@ -122,40 +123,39 @@ function buildEmail({
 
       <!-- Video card -->
       <tr><td style="padding:0 0 20px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;border-top:3px solid ${col.bg};overflow:hidden;">
+          <tr>
+            ${thumbCellHtml}
+            <td style="padding:16px 18px 18px 0;vertical-align:top;">
 
-          ${thumbnailHtml}
+              <!-- Product badge -->
+              <div style="margin-bottom:9px;">
+                <span style="display:inline-block;background:${col.light};color:${col.text};font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">
+                  ${getBrandLabel(product.emoji)} ${product.name}
+                </span>
+                <span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:4px;">
+                  ${category}
+                </span>
+              </div>
 
-          <!-- Card content -->
-          <tr><td style="padding:20px 22px 24px 22px;">
+              <!-- Title -->
+              <p style="margin:0 0 7px 0;font-size:16px;font-weight:700;color:#111827;line-height:1.3;">
+                ${video.title}
+              </p>
 
-            <!-- Product badge -->
-            <div style="margin-bottom:12px;">
-              <span style="display:inline-block;background:${col.light};color:${col.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;">
-                ${getBrandLabel(product.emoji)} ${product.name}
-              </span>
-              <span style="display:inline-block;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;margin-left:5px;">
-                ${category}
-              </span>
-            </div>
+              ${video.description ? `
+              <p style="margin:0 0 11px 0;font-size:12px;color:#6b7280;line-height:1.55;">
+                ${video.description.slice(0, 120)}${video.description.length > 120 ? "…" : ""}
+              </p>` : `<div style="margin-bottom:11px;"></div>`}
 
-            <!-- Title -->
-            <h1 style="margin:0 0 10px 0;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">
-              ${video.title}
-            </h1>
+              <!-- CTA -->
+              <a href="${videoUrl}"
+                style="display:inline-block;background:${col.bg};color:#ffffff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:6px;text-decoration:none;">
+                Watch Video &rarr;
+              </a>
 
-            ${video.description ? `
-            <p style="margin:0 0 20px 0;font-size:14px;color:#6b7280;line-height:1.65;">
-              ${video.description}
-            </p>` : `<div style="margin-bottom:20px;"></div>`}
-
-            <!-- CTA -->
-            <a href="${videoUrl}"
-              style="display:inline-block;background:${col.bg};color:#ffffff;font-size:13px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;letter-spacing:0.01em;">
-              Watch Video &rarr;
-            </a>
-
-          </td></tr>
+            </td>
+          </tr>
         </table>
       </td></tr>
 
