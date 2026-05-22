@@ -62,6 +62,14 @@ export default function AdminPage() {
             <h2 className="font-semibold text-gray-900 mb-1">Newsletter</h2>
             <p className="text-sm text-gray-500">Send content updates to subscribers.</p>
           </Link>
+          <Link
+            href="/admin/social"
+            className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm hover:border-gray-300 transition-all"
+          >
+            <div className="text-3xl mb-3">📲</div>
+            <h2 className="font-semibold text-gray-900 mb-1">Social Posts</h2>
+            <p className="text-sm text-gray-500">Generate LinkedIn, Instagram, and Facebook posts from videos and articles.</p>
+          </Link>
         </div>
       </main>
     </div>
