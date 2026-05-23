@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
+import { BRAND_ICONS, isBrandIcon } from "@/lib/brandIcons";
 
 interface Product { id: string; name: string; slug: string; emoji: string; color: string }
 interface ContentItem {
@@ -51,6 +52,17 @@ interface GeneratedPosts {
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://training.allstartalent.us";
+
+function ProductEmoji({ emoji }: { emoji: string }) {
+  if (!isBrandIcon(emoji)) return <span>{emoji}</span>;
+  const icon = BRAND_ICONS[emoji];
+  if (!icon) return <span>{emoji.replace("brand:", "")}</span>;
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill={icon.hex} style={{ flexShrink: 0 }}>
+      <path d={icon.path} />
+    </svg>
+  );
+}
 
 const PLATFORMS = [
   {
@@ -264,7 +276,7 @@ export default function SocialPostsPage() {
                       onClick={() => toggleProduct(product)}
                       className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
                     >
-                      <span>{product.emoji}</span>
+                      <ProductEmoji emoji={product.emoji} />
                       <span className="flex-1 text-left truncate">{product.name}</span>
                       <svg
                         className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
