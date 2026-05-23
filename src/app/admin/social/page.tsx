@@ -107,6 +107,7 @@ export default function SocialPostsPage() {
   const [posts, setPosts] = useState<GeneratedPosts | null>(null);
   const [activeTab, setActiveTab] = useState<"linkedin" | "instagram" | "facebook">("linkedin");
   const [copied, setCopied] = useState<string | null>(null);
+  const [socialImageTemplate, setSocialImageTemplate] = useState<number>(1);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => {
@@ -185,6 +186,7 @@ export default function SocialPostsPage() {
     if (!selected) return;
     setGenerating(true);
     setGenError("");
+    setSocialImageTemplate(Math.floor(Math.random() * 4) + 1);
     try {
       const r = await fetch("/api/generate-social-posts", {
         method: "POST",
@@ -394,36 +396,45 @@ export default function SocialPostsPage() {
                 {/* Generated posts */}
                 {posts && (
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    {/* Image panel */}
-                    {selected.thumbnailUrl && (
-                      <div className="border-b border-gray-100 p-4 flex items-center gap-4 bg-gray-50">
-                        <div className="flex-shrink-0">
+                    {/* Branded social image panel */}
+                    {(() => {
+                      const socialImageUrl = `/api/social-image?title=${encodeURIComponent(selected.title)}&productName=${encodeURIComponent(selected.productName)}&thumbnailUrl=${encodeURIComponent(selected.thumbnailUrl ?? "")}&template=${socialImageTemplate}`;
+                      return (
+                        <div className="border-b border-gray-100 p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-gray-700">Post image</p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setSocialImageTemplate(t => (t % 4) + 1)}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 bg-white border border-gray-200 rounded-md px-2 py-1 transition-colors"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Design {socialImageTemplate}/4
+                              </button>
+                              <a
+                                href={socialImageUrl}
+                                download="social-image.png"
+                                className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-gray-300 text-gray-700 rounded-md px-2.5 py-1 hover:bg-gray-50 transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Save image
+                              </a>
+                            </div>
+                          </div>
                           <img
-                            src={selected.thumbnailUrl.includes(".blob.vercel-storage.com")
-                              ? `/api/blob?url=${encodeURIComponent(selected.thumbnailUrl)}`
-                              : selected.thumbnailUrl}
-                            alt={selected.title}
-                            className="w-32 h-20 object-cover rounded-lg border border-gray-200"
+                            src={socialImageUrl}
+                            alt="Branded social image"
+                            className="w-full rounded-lg border border-gray-200"
+                            style={{ aspectRatio: "1200/630" }}
                           />
+                          <p className="text-xs text-gray-400 mt-1.5">1200 × 630 px · attach when publishing each post</p>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-700 mb-0.5">Post image</p>
-                          <p className="text-xs text-gray-500 mb-2">Save this thumbnail to attach when publishing each post.</p>
-                          <a
-                            href={selected.thumbnailUrl.includes(".blob.vercel-storage.com")
-                              ? `/api/blob?url=${encodeURIComponent(selected.thumbnailUrl)}`
-                              : selected.thumbnailUrl}
-                            download="thumbnail.jpg"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Save image
-                          </a>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Platform tab bar */}
                     <div className="flex border-b border-gray-200">
