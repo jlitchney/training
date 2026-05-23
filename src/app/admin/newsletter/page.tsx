@@ -21,6 +21,18 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { BRAND_ICONS, isBrandIcon } from "@/lib/brandIcons";
+
+function ProductEmoji({ emoji, size = 16 }: { emoji: string; size?: number }) {
+  if (!isBrandIcon(emoji)) return <span>{emoji}</span>;
+  const icon = BRAND_ICONS[emoji];
+  if (!icon) return <span>{emoji.replace("brand:", "")}</span>;
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={icon.hex} style={{ flexShrink: 0, display: "inline-block" }}>
+      <path d={icon.path} />
+    </svg>
+  );
+}
 
 interface User { name: string; role: string; email?: string }
 
@@ -207,7 +219,7 @@ function ContentPickerModal({
                     onClick={() => selectProduct(p)}
                     className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-sm font-medium text-gray-900 flex items-center gap-2"
                   >
-                    <span>{p.emoji}</span>
+                    <ProductEmoji emoji={p.emoji} />
                     <span>{p.name}</span>
                     <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -236,7 +248,7 @@ function ContentPickerModal({
                 </svg>
                 Back
               </button>
-              <p className="text-sm font-medium text-gray-700 mb-3">{selectedProduct.emoji} {selectedProduct.name}</p>
+              <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5"><ProductEmoji emoji={selectedProduct.emoji} /> {selectedProduct.name}</p>
               {Object.entries(grouped).map(([cat, items]) => (
                 <div key={cat} className="mb-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{cat}</p>
