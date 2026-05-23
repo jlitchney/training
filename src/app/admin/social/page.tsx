@@ -330,7 +330,9 @@ export default function SocialPostsPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-4">
                   {selected.thumbnailUrl ? (
                     <img
-                      src={selected.thumbnailUrl}
+                      src={selected.thumbnailUrl.includes(".blob.vercel-storage.com")
+                        ? `/api/blob?url=${encodeURIComponent(selected.thumbnailUrl)}`
+                        : selected.thumbnailUrl}
                       alt=""
                       className="w-20 h-14 object-cover rounded-lg flex-shrink-0 bg-gray-100"
                     />
