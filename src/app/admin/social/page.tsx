@@ -198,7 +198,7 @@ export default function SocialPostsPage() {
     if (!selected) return;
     setGenerating(true);
     setGenError("");
-    setSocialImageTemplate(Math.floor(Math.random() * 4) + 1);
+    setSocialImageTemplate(Math.floor(Math.random() * 8) + 1);
     try {
       const r = await fetch("/api/generate-social-posts", {
         method: "POST",
@@ -417,13 +417,13 @@ export default function SocialPostsPage() {
                             <p className="text-xs font-semibold text-gray-700">Post image</p>
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => setSocialImageTemplate(t => (t % 4) + 1)}
+                                onClick={() => setSocialImageTemplate(t => (t % 8) + 1)}
                                 className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 bg-white border border-gray-200 rounded-md px-2 py-1 transition-colors"
                               >
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
-                                Design {socialImageTemplate}/4
+                                Design {socialImageTemplate}/8
                               </button>
                               <a
                                 href={socialImageUrl}
