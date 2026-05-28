@@ -180,7 +180,7 @@ export function buildNewsletterEmail({
   const introHtml = intro
     ? `<tr><td style="padding:0 0 24px 0;">
         <div style="background:#f9fafb;border-left:3px solid #6b7280;border-radius:0 8px 8px 0;padding:14px 16px;">
-          <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap;">${intro.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+          <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">${intro.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
         </div>
       </td></tr>`
     : "";
