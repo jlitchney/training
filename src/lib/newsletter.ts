@@ -22,7 +22,7 @@ export interface Subscriber {
   id: string;
   email: string;
   name?: string;
-  source: "upload" | "signup";
+  source: "upload" | "signup" | "crm";
   subscribedAt: string;
   active: boolean;
 }
@@ -97,7 +97,7 @@ export async function saveCampaigns(campaigns: SentCampaign[]): Promise<void> {
   await db.set(CAMPAIGNS_KEY, campaigns);
 }
 
-export function newSubscriber(email: string, name: string | undefined, source: "upload" | "signup"): Subscriber {
+export function newSubscriber(email: string, name: string | undefined, source: "upload" | "signup" | "crm"): Subscriber {
   return {
     id: uuidv4(),
     email: email.toLowerCase().trim(),
