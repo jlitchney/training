@@ -320,6 +320,64 @@ function SortableNewsletterItem({
   );
 }
 
+function RichTextIntro({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [value]);
+
+  function exec(cmd: string, val?: string) {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val ?? undefined);
+    onChange(editorRef.current?.innerHTML ?? "");
+  }
+
+  function handleLink(e: React.MouseEvent) {
+    e.preventDefault();
+    const url = window.prompt("Enter URL:", "https://");
+    if (!url) return;
+    editorRef.current?.focus();
+    document.execCommand("createLink", false, url);
+    editorRef.current?.querySelectorAll("a:not([target])").forEach((a) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
+    });
+    onChange(editorRef.current?.innerHTML ?? "");
+  }
+
+  const btn = "px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-200 rounded transition-colors select-none";
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+        <button type="button" title="Bold" onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} className={`${btn} font-bold`}>B</button>
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+        <button type="button" title="Insert link" onMouseDown={handleLink} className={btn}>
+          <svg className="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+          <span className="ml-1">Link</span>
+        </button>
+        <div className="w-px h-4 bg-gray-300 mx-1" />
+        <button type="button" title="Bullet list" onMouseDown={(e) => { e.preventDefault(); exec("insertUnorderedList"); }} className={btn}>
+          <svg className="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+          <span className="ml-1">List</span>
+        </button>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => onChange(editorRef.current?.innerHTML ?? "")}
+        className="w-full px-3 py-2 text-sm min-h-[80px] focus:outline-none prose prose-sm max-w-none"
+        style={{ lineHeight: "1.6" }}
+      />
+    </div>
+  );
+}
+
 function PreviewModal({ subject, intro, items, onClose }: { subject: string; intro: string; items: NewsletterItem[]; onClose: () => void }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -366,7 +424,7 @@ function PreviewModal({ subject, intro, items, onClose }: { subject: string; int
           </div>
           {intro && (
             <div className="bg-gray-100 border-l-4 border-gray-400 rounded-r-lg p-4 mb-4">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{intro}</p>
+              <div className="text-sm text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: intro }} />
             </div>
           )}
           {items.map(itemPreview)}
@@ -617,13 +675,7 @@ export default function NewsletterAdminPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Intro <span className="text-gray-400 font-normal">(optional)</span></label>
-              <textarea
-                value={intro}
-                onChange={(e) => setIntro(e.target.value)}
-                placeholder="A short message to kick off the newsletter…"
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
-              />
+              <RichTextIntro value={intro} onChange={setIntro} />
             </div>
 
             <div>
@@ -866,7 +918,7 @@ export default function NewsletterAdminPage() {
                         </p>
                       </div>
                     </div>
-                    {c.intro && <p className="text-sm text-gray-500 mb-3 italic">&ldquo;{c.intro.slice(0, 120)}{c.intro.length > 120 ? "…" : ""}&rdquo;</p>}
+                    {c.intro && (() => { const plain = c.intro.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); return <p className="text-sm text-gray-500 mb-3 italic">&ldquo;{plain.slice(0, 120)}{plain.length > 120 ? "…" : ""}&rdquo;</p>; })()}
                     <div className="flex flex-wrap gap-2">
                       {c.items.map((item, idx) => (
                         <span key={idx} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">

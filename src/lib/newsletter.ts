@@ -110,6 +110,15 @@ export function newSubscriber(email: string, name: string | undefined, source: "
 
 function c(color: string) { return COLOR_HEX[color] ?? COLOR_HEX.blue; }
 
+function inlineStyleIntro(html: string): string {
+  return html
+    .replace(/<div>/gi, '<div style="margin:4px 0;">')
+    .replace(/<ul\b[^>]*>/gi, '<ul style="margin:6px 0;padding-left:20px;">')
+    .replace(/<ol\b[^>]*>/gi, '<ol style="margin:6px 0;padding-left:20px;">')
+    .replace(/<li\b[^>]*>/gi, '<li style="margin:3px 0;">')
+    .replace(/<a\b((?:(?!style=)[^>])*?)>/gi, '<a$1 style="color:#2563eb;text-decoration:underline;">');
+}
+
 function itemCard(item: NewsletterItem, origin: string): string {
   const col = c(item.productColor);
   const isVideo = item.type === "video";
@@ -180,7 +189,7 @@ export function buildNewsletterEmail({
   const introHtml = intro
     ? `<tr><td style="padding:0 0 24px 0;">
         <div style="background:#f9fafb;border-left:3px solid #6b7280;border-radius:0 8px 8px 0;padding:14px 16px;">
-          <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">${intro.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</p>
+          <div style="margin:0;font-size:14px;color:#374151;line-height:1.6;">${inlineStyleIntro(intro)}</div>
         </div>
       </td></tr>`
     : "";
