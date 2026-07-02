@@ -572,6 +572,63 @@ export async function savePlanProgress(assignmentId: string, progress: Record<st
   await db.set(progressKey(assignmentId), progress);
 }
 
+// ── Demo Videos ─────────────────────────────────────────────────────
+export interface DemoVideo {
+  id: string;
+  title: string;
+  clientName: string;
+  notes?: string;
+  blobUrl: string;
+  thumbnailUrl?: string;
+  duration?: number;
+  recordedAt: string;
+  recordedBy: string;
+}
+
+const DEMO_VIDEOS_KEY = "training:demo-videos:v1";
+let memDemoVideos: DemoVideo[] = [];
+
+export async function getDemoVideos(): Promise<DemoVideo[]> {
+  if (!hasKV()) return [...memDemoVideos].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  try {
+    const db = await kv();
+    return (await db.get<DemoVideo[]>(DEMO_VIDEOS_KEY)) ?? [];
+  } catch { return []; }
+}
+
+export async function getDemoVideo(id: string): Promise<DemoVideo | null> {
+  const videos = await getDemoVideos();
+  return videos.find((v) => v.id === id) ?? null;
+}
+
+export async function saveDemoVideos(videos: DemoVideo[]): Promise<void> {
+  if (!hasKV()) { memDemoVideos = videos; return; }
+  const db = await kv();
+  await db.set(DEMO_VIDEOS_KEY, videos);
+}
+
+export async function createDemoVideo(data: Omit<DemoVideo, "id" | "recordedAt">): Promise<DemoVideo> {
+  const videos = await getDemoVideos();
+  const newVideo: DemoVideo = { ...data, id: uuidv4(), recordedAt: new Date().toISOString() };
+  await saveDemoVideos([newVideo, ...videos]);
+  return newVideo;
+}
+
+export async function updateDemoVideo(id: string, patch: Partial<Pick<DemoVideo, "title" | "clientName" | "notes" | "thumbnailUrl">>): Promise<DemoVideo | null> {
+  const videos = await getDemoVideos();
+  const idx = videos.findIndex((v) => v.id === id);
+  if (idx === -1) return null;
+  const updated = { ...videos[idx], ...patch };
+  videos[idx] = updated;
+  await saveDemoVideos(videos);
+  return updated;
+}
+
+export async function deleteDemoVideo(id: string): Promise<void> {
+  const videos = await getDemoVideos();
+  await saveDemoVideos(videos.filter((v) => v.id !== id));
+}
+
 // ── Blob URL reverse lookup ──────────────────────────────────────────
 // Used by the blob proxy to check internal content visibility without
 // knowing the productId upfront.
