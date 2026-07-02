@@ -79,7 +79,20 @@ function buildEmailEmbed(video: DemoVideo): string {
   const link = `${BASE_URL}/demo/${video.id}`;
   const imgSrc = `${BASE_URL}/api/demo-videos/${video.id}/preview-image`;
   const alt = video.title.replace(/"/g, "&quot;");
-  return `<a href="${link}" target="_blank" style="display:block;text-decoration:none;border:0"><img src="${imgSrc}" alt="${alt}" width="560" border="0" style="display:block;max-width:100%;border-radius:8px;border:0"></a>`;
+  // Table-based layout so both the image link and the Watch Video button
+  // survive Outlook's paste — Outlook sometimes strips <a> from images.
+  return [
+    `<table width="560" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,sans-serif;border-radius:8px;overflow:hidden">`,
+    `<tr><td>`,
+    `<a href="${link}" target="_blank" style="display:block;text-decoration:none;border:0">`,
+    `<img src="${imgSrc}" alt="${alt}" width="560" border="0" style="display:block;max-width:100%;border:0;border-radius:8px 8px 0 0">`,
+    `</a>`,
+    `</td></tr>`,
+    `<tr><td align="center" bgcolor="#2563eb" style="background:#2563eb;padding:14px 20px;border-radius:0 0 8px 8px">`,
+    `<a href="${link}" target="_blank" style="color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;font-family:Arial,sans-serif;display:block">&#9654;&nbsp;&nbsp;Watch Video</a>`,
+    `</td></tr>`,
+    `</table>`,
+  ].join("");
 }
 
 async function copyRichHtml(html: string) {

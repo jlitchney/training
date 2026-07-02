@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: video.title,
     openGraph: {
       title: video.title,
-      siteName: "AllStar Talent",
+      siteName: "All-Star Talent",
       images,
     },
   };
@@ -78,7 +78,7 @@ export default async function DemoVideoPage({ params }: { params: Promise<{ id: 
       {/* Footer */}
       <footer className="flex-shrink-0 px-6 py-4 text-center border-t border-white/10">
         <p className="text-xs text-gray-600">
-          Shared by <span className="text-gray-500">{video.recordedBy}</span> · AllStar Talent
+          Shared by <span className="text-gray-500">{video.recordedBy}</span> · All-Star Talent
         </p>
       </footer>
     </div>
