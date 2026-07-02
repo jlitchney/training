@@ -247,6 +247,12 @@ export default function HomePage() {
                   Recording Studio
                 </Link>
                 <Link
+                  href="/studio/demo"
+                  className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Client Demos
+                </Link>
+                <Link
                   href="/learning"
                   className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors"
                 >

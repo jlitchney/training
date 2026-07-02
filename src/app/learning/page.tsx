@@ -214,6 +214,9 @@ export default function LearningPage() {
               <Link href="/studio" className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">
                 Recording Studio
               </Link>
+              <Link href="/studio/demo" className="text-xs font-medium px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 transition-colors">
+                Client Demos
+              </Link>
               <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm">
                 Learning Center
               </span>
