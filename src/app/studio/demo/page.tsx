@@ -77,12 +77,9 @@ const BASE_URL = typeof window !== "undefined"
 
 function buildEmailEmbed(video: DemoVideo): string {
   const link = `${BASE_URL}/demo/${video.id}`;
+  const imgSrc = `${BASE_URL}/api/demo-videos/${video.id}/preview-image`;
   const alt = video.title.replace(/"/g, "&quot;");
-  if (video.thumbnailUrl) {
-    const imgSrc = `${BASE_URL}/api/blob?url=${encodeURIComponent(video.thumbnailUrl)}`;
-    return `<a href="${link}" target="_blank" style="display:block;text-decoration:none;border:0"><img src="${imgSrc}" alt="${alt}" width="560" border="0" style="display:block;max-width:100%;border-radius:8px;border:0"></a>`;
-  }
-  return `<a href="${link}" target="_blank" style="font-size:16px;font-family:Arial,sans-serif;color:#2563eb;text-decoration:underline">${video.title} — Watch Video</a>`;
+  return `<a href="${link}" target="_blank" style="display:block;text-decoration:none;border:0"><img src="${imgSrc}" alt="${alt}" width="560" border="0" style="display:block;max-width:100%;border-radius:8px;border:0"></a>`;
 }
 
 async function copyRichHtml(html: string) {
